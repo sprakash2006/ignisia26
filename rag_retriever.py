@@ -5,6 +5,7 @@ from collections import defaultdict
 from sentence_transformers import SentenceTransformer
 from openai import OpenAI
 from conflict_detector import ConflictDetector
+from org_model import User, visible_owners
 
 
 class RAGRetriever:
@@ -63,15 +64,35 @@ class RAGRetriever:
 
         return analysis
 
-    def query(self, question: str, history: list[dict] = None) -> dict:
+    def _filter_by_access(self, docs, metadatas, distances, user: User | None):
+        """Remove chunks the current user is not allowed to see."""
+        if user is None:
+            return docs, metadatas, distances  # no filtering (legacy/admin mode)
+
+        allowed = visible_owners(user)
+        # Map allowed set: None in allowed means shared docs are ok → match "__shared__"
+        allowed_owners = set()
+        for a in allowed:
+            allowed_owners.add("__shared__" if a is None else a)
+
+        filtered = [(d, m, dist) for d, m, dist in zip(docs, metadatas, distances)
+                     if m.get("owner", "__shared__") in allowed_owners]
+
+        if not filtered:
+            return [], [], []
+        docs_f, metas_f, dists_f = zip(*filtered)
+        return list(docs_f), list(metas_f), list(dists_f)
+
+    def query(self, question: str, history: list[dict] = None, user: User | None = None) -> dict:
         try:
             chat_history = history[-10:] if history else []
 
             query_embed = self.embedder.encode(question).tolist()
 
+            # Fetch more candidates so we still have enough after access filtering
             results = self.collection.query(
                 query_embeddings=[query_embed],
-                n_results=15,
+                n_results=30,
                 include=["documents", "distances", "metadatas"]
             )
 
@@ -82,9 +103,22 @@ class RAGRetriever:
                     "analysis": {"duplicates": [], "conflicts": [], "unique_sources": set()},
                 }
 
-            retrieved_docs = results["documents"][0]
-            metadatas = results["metadatas"][0]
-            distances = results["distances"][0] if results.get("distances") else []
+            # ── Access control: drop chunks the user must not see ──
+            raw_docs = results["documents"][0]
+            raw_metas = results["metadatas"][0]
+            raw_dists = results["distances"][0] if results.get("distances") else [0] * len(raw_docs)
+
+            filtered = self._filter_by_access(raw_docs, raw_metas, raw_dists, user)
+            if not filtered[0]:
+                return {
+                    "content": "Value not available in the source documents.",
+                    "sources": [],
+                    "analysis": {"duplicates": [], "conflicts": [], "unique_sources": set()},
+                }
+
+            retrieved_docs = list(filtered[0])[:15]
+            metadatas = list(filtered[1])[:15]
+            distances = list(filtered[2])[:15]
             similarity_scores = [round(1 - d, 4) for d in distances]
 
             # Run duplicate/conflict detection
@@ -111,6 +145,8 @@ class RAGRetriever:
                     "date_added": date_added,
                     "chunk": doc,
                     "similarity": score,
+                    "owner": meta.get("owner", "__shared__"),
+                    "visibility": meta.get("visibility", "shared"),
                 })
 
             context = "\n\n---\n\n".join(context_parts)
@@ -157,7 +193,18 @@ class RAGRetriever:
                         conflict_details.append(f"Field '{c['field']}' has different values: {vals}")
                 analysis_advisory += f"\n⚠️ CONFLICTING DATA DETECTED: {'; '.join(conflict_details)}\n"
 
+            # Build user context line for the LLM
+            user_context = ""
+            if user:
+                user_context = (
+                    f"\n## Current User\n"
+                    f"Name: {user.name}, Role: {user.role.title()}\n"
+                    f"You are answering on behalf of this user. "
+                    f"Only documents they are authorized to see are included below.\n"
+                )
+
             system_prompt = f"""You are a reliable enterprise knowledge agent. You answer questions ONLY from the provided document context.
+{user_context}
 
 ## STRICT RULES — FOLLOW EXACTLY
 
@@ -212,7 +259,14 @@ Your response MUST contain ALL of these sections in order:
                 "analysis": {"duplicates": [], "conflicts": [], "unique_sources": set()},
             }
 
-    def add_documents(self, filename: str, chunks: list[dict]):
+    def add_documents(self, filename: str, chunks: list[dict],
+                      owner: str | None = None, visibility: str = "shared"):
+        """
+        Store document chunks with ownership metadata.
+
+        owner:      username who owns the doc (None = org-wide shared doc)
+        visibility: "shared" (everyone) or "private" (access-controlled)
+        """
         if not chunks:
             return
 
@@ -223,7 +277,9 @@ Your response MUST contain ALL of these sections in order:
             "page": c["page"],
             "line": c.get("line", 1),
             "section": c.get("section", ""),
-            "date_added": c.get("source_date") or today_date
+            "date_added": c.get("source_date") or today_date,
+            "owner": owner or "__shared__",
+            "visibility": visibility,
         } for c in chunks]
         ids = [f"{filename}_{i}" for i in range(len(chunks))]
 
@@ -232,17 +288,36 @@ Your response MUST contain ALL of these sections in order:
             metadatas=metadatas,
             ids=ids
         )
-        logging.info(f"Added {len(chunks)} chunks for '{filename}'")
+        logging.info(f"Added {len(chunks)} chunks for '{filename}' "
+                     f"[owner={owner or 'shared'}, visibility={visibility}]")
 
     def get_doc_count(self) -> int:
         return self.collection.count()
 
-    def list_sources(self) -> list[str]:
+    def list_sources(self, user: User | None = None) -> list[dict]:
+        """Return list of {source, owner, visibility} dicts, filtered by access."""
         all_meta = self.collection.get(include=["metadatas"])
-        sources = set()
+        seen = set()
+        sources = []
+
+        if user is not None:
+            allowed = visible_owners(user)
+            allowed_owners = {"__shared__" if a is None else a for a in allowed}
+        else:
+            allowed_owners = None  # no filter
+
         for meta in all_meta["metadatas"]:
-            sources.add(meta.get("source", "Unknown"))
-        return sorted(sources)
+            name = meta.get("source", "Unknown")
+            owner = meta.get("owner", "__shared__")
+            vis = meta.get("visibility", "shared")
+
+            if allowed_owners is not None and owner not in allowed_owners:
+                continue
+            if name not in seen:
+                seen.add(name)
+                sources.append({"source": name, "owner": owner, "visibility": vis})
+
+        return sorted(sources, key=lambda s: s["source"])
 
     def delete_by_source(self, filename: str):
         all_data = self.collection.get(include=["metadatas"])

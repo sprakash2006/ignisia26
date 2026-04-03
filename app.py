@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 from rag_ingestor import FileIngestor
 from rag_retriever import RAGRetriever
 from email_fetcher import EmailFetcher
+from org_model import list_users, get_user
 
 load_dotenv()
 
@@ -41,10 +42,12 @@ if "email_log" not in st.session_state:
     st.session_state.email_log = []
 if "email_connected" not in st.session_state:
     st.session_state.email_connected = False
+if "current_user" not in st.session_state:
+    st.session_state.current_user = list_users()[0].name
 
 
 # ── Helper: ingest a single uploaded file ─────────────────────────
-def _ingest_file(file_path, display_name=None):
+def _ingest_file(file_path, display_name=None, owner=None, visibility="shared"):
     """Ingest a file into the RAG store. Returns (success, num_chunks)."""
     fname = display_name or os.path.basename(file_path)
     if fname in st.session_state.ingested_files:
@@ -52,7 +55,8 @@ def _ingest_file(file_path, display_name=None):
 
     chunks, filename = ingestor.process_file(file_path)
     if chunks:
-        rag.add_documents(filename=fname, chunks=chunks)
+        rag.add_documents(filename=fname, chunks=chunks,
+                          owner=owner, visibility=visibility)
         st.session_state.ingested_files.add(fname)
         return True, len(chunks)
     return False, 0
@@ -60,12 +64,13 @@ def _ingest_file(file_path, display_name=None):
 
 # ── IMAP email polling ────────────────────────────────────────────
 def _poll_emails():
-    """Fetch new emails from IMAP and ingest them."""
+    """Fetch new emails from IMAP and ingest them as private docs for the current user."""
     if not fetcher.is_configured():
         return 0
 
     new_emails = fetcher.fetch_new_emails()
     new_count = 0
+    current_user = st.session_state.current_user
 
     for em in new_emails:
         fname = em["filename"]
@@ -74,14 +79,16 @@ def _poll_emails():
 
         chunks = em["chunks"]
         if chunks:
-            rag.add_documents(filename=fname, chunks=chunks)
+            # Emails are always private to the user who fetched them
+            rag.add_documents(filename=fname, chunks=chunks,
+                              owner=current_user, visibility="private")
             st.session_state.ingested_files.add(fname)
             new_count += 1
 
             timestamp = time.strftime("%H:%M:%S")
             st.session_state.email_log.append(
                 f"**{timestamp}** — 📨 *{em['subject']}* from `{em['from']}` "
-                f"({em['date']}) — {len(chunks)} chunks"
+                f"({em['date']}) — {len(chunks)} chunks [owner: {current_user}]"
             )
 
     if new_count > 0:
@@ -92,9 +99,38 @@ def _poll_emails():
 
 # --- Sidebar ---
 with st.sidebar:
-    st.header("📂 Documents")
+    # ── User selector (top of sidebar) ──
+    st.header("👤 Current User")
+    users = list_users()
+    user_names = [u.name for u in users]
+    user_labels = [u.display for u in users]
+    idx = user_names.index(st.session_state.current_user) if st.session_state.current_user in user_names else 0
+    selected = st.selectbox("Acting as:", user_labels, index=idx,
+                            help="Different users see different documents based on their role.")
+    chosen_name = user_names[user_labels.index(selected)]
+    if chosen_name != st.session_state.current_user:
+        st.session_state.current_user = chosen_name
+        # Clear chat when switching users so responses don't leak across roles
+        st.session_state.messages = []
+        st.rerun()
+
+    active_user = get_user(st.session_state.current_user)
+    role_badge = {"director": "🟣", "manager": "🔵", "employee": "🟢"}.get(active_user.role, "⚪")
+    st.caption(f"{role_badge} Role: **{active_user.role.title()}** — "
+               f"Reports to: {active_user.reports_to or '—'}")
+
+    st.divider()
 
     # ── File uploader ──
+    st.header("📂 Documents")
+
+    upload_space = st.radio(
+        "Upload to:",
+        ["🏢 Shared (org-wide)", f"🔒 Private ({active_user.name}'s space)"],
+        help="Shared docs are visible to everyone. Private docs follow role-based access."
+    )
+    is_private = upload_space.startswith("🔒")
+
     uploaded_files = st.file_uploader(
         "Upload files (PDF, DOCX, XLSX, CSV, TXT, EML)",
         type=["pdf", "docx", "xlsx", "csv", "txt", "eml"],
@@ -107,9 +143,13 @@ with st.sidebar:
             with open(file_path, "wb") as f:
                 f.write(uploaded_file.getbuffer())
 
-            success, n_chunks = _ingest_file(file_path, display_name=uploaded_file.name)
+            owner = active_user.name if is_private else None
+            vis = "private" if is_private else "shared"
+            success, n_chunks = _ingest_file(file_path, display_name=uploaded_file.name,
+                                              owner=owner, visibility=vis)
             if success:
-                st.success(f"✅ {uploaded_file.name} — {n_chunks} chunks indexed")
+                label = f"🔒 {active_user.name}" if is_private else "🏢 Shared"
+                st.success(f"✅ {uploaded_file.name} — {n_chunks} chunks [{label}]")
             elif uploaded_file.name in st.session_state.ingested_files:
                 st.info(f"ℹ️ {uploaded_file.name} already indexed")
             else:
@@ -120,7 +160,6 @@ with st.sidebar:
     st.subheader("📬 Email Integration")
 
     if fetcher.is_configured():
-        # Test connection on first load
         if not st.session_state.email_connected:
             ok, msg = fetcher.test_connection()
             st.session_state.email_connected = ok
@@ -130,6 +169,8 @@ with st.sidebar:
                 st.error(f"❌ {msg}")
         else:
             st.success(f"✅ Connected to `{fetcher.email_addr}`")
+
+        st.caption(f"Emails will be ingested as **private** docs for **{active_user.name}**")
 
         if st.button("📥 Refresh Emails"):
             with st.spinner("Checking mailbox..."):
@@ -157,21 +198,25 @@ with st.sidebar:
         for entry in reversed(st.session_state.email_log[-10:]):
             st.markdown(entry)
 
-    # ── Indexed documents list ──
+    # ── Indexed documents list (filtered by current user's access) ──
     st.divider()
     st.subheader("📑 Indexed Documents")
-    sources = rag.list_sources()
+    sources = rag.list_sources(user=active_user)
     if sources:
         for src in sources:
-            ext = os.path.splitext(src)[1].lower()
-            icon = {
+            ext = os.path.splitext(src["source"])[1].lower()
+            type_icon = {
                 ".xlsx": "📊", ".csv": "📊", ".pdf": "📄",
                 ".docx": "📝", ".txt": "📃", ".eml": "📧",
             }.get(ext, "📎")
-            st.write(f"{icon} {src}")
-        st.caption(f"Total chunks: {rag.get_doc_count()}")
+            vis_icon = "🔒" if src["visibility"] == "private" else "🏢"
+            owner_label = src["owner"] if src["owner"] != "__shared__" else "Shared"
+            st.write(f"{type_icon} {vis_icon} {src['source']}  \n"
+                     f"<small style='color:gray'>Owner: {owner_label}</small>",
+                     unsafe_allow_html=True)
+        st.caption(f"Total chunks (visible): {rag.get_doc_count()}")
     else:
-        st.info("No documents uploaded yet.")
+        st.info("No documents visible for your role.")
 
     st.divider()
     if st.button("🗑️ Clear All Data", type="secondary"):
@@ -191,13 +236,15 @@ def _render_sources(sources_list):
         for src in sources_list:
             section_str = f", Section: {src['section']}" if src.get("section") else ""
             doc_name = str(src.get("document", ""))
+            vis_icon = "🔒" if src.get("visibility") == "private" else "🏢"
             if doc_name.endswith(".eml"):
                 line_label = "Part"
             elif src.get("section") in ("CSV",) or doc_name.endswith((".xlsx", ".csv")):
                 line_label = "Row"
             else:
                 line_label = "Line"
-            info = f"— **{doc_name}** (Page {src['page']}, {line_label} {src.get('line', '?')}{section_str})"
+            info = (f"— {vis_icon} **{doc_name}** "
+                    f"(Page {src['page']}, {line_label} {src.get('line', '?')}{section_str})")
             if src.get("similarity") is not None:
                 info += f" | Relevance: {src['similarity']:.2%}"
             st.markdown(info)
@@ -238,8 +285,9 @@ if question := st.chat_input("Ask a question about your documents..."):
         query_sources = []
         query_conflicts = []
     else:
-        with st.spinner("Searching across all documents & emails..."):
-            result = rag.query(question, history=st.session_state.messages)
+        with st.spinner(f"Searching as {active_user.display}..."):
+            result = rag.query(question, history=st.session_state.messages,
+                               user=active_user)
             answer = result["content"]
             query_sources = result["sources"]
             query_conflicts = result.get("analysis", {}).get("conflicts", [])

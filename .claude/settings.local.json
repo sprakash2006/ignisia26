@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \"from org_model import *; print\\([u.display for u in list_users\\(\\)]\\); print\\(visible_owners\\(get_user\\(''Priya''\\)\\)\\); print\\(visible_owners\\(get_user\\(''Meera''\\)\\)\\); print\\(visible_owners\\(get_user\\(''Arjun''\\)\\)\\)\")",
+      "Bash(python -c \"import rag_retriever; print\\(''rag_retriever OK''\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\(''app.py''\\).read\\(\\)\\); print\\(''app.py OK''\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\(''app.py'', encoding=''utf-8''\\).read\\(\\)\\); print\\(''app.py OK''\\)\")"
+    ]
+  }
+}
