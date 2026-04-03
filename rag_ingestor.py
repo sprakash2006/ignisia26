@@ -1,5 +1,9 @@
 import os
+import re
 import csv
+import email
+import email.policy
+from email.utils import parsedate_to_datetime
 from unstructured.partition.pdf import partition_pdf
 from unstructured.partition.docx import partition_docx
 from unstructured.chunking.title import chunk_by_title
@@ -31,6 +35,8 @@ class FileIngestor:
         elif ext == ".txt":
             text = self._extract_text_from_txt(file_path)
             all_chunks = [{"text": chunk, "page": 1, "line": i + 1} for i, chunk in enumerate(self._split_into_chunks(text))]
+        elif ext == ".eml":
+            all_chunks = self._process_email(file_path)
         else:
             print(f"[WARN] Unsupported file type: {ext}")
             return [], filename
@@ -176,4 +182,87 @@ class FileIngestor:
             return all_chunks
         except Exception as e:
             print(f"[ERROR] CSV processing failed: {e}")
+            return []
+
+    # ── Email (.eml) processing ──────────────────────────────────────
+
+    def _process_email(self, file_path):
+        """Parse a .eml file and return chunks with email metadata."""
+        try:
+            with open(file_path, "rb") as f:
+                msg = email.message_from_binary_file(f, policy=email.policy.default)
+
+            # Extract header fields
+            sender = str(msg.get("From", "Unknown"))
+            subject = str(msg.get("Subject", "(No Subject)"))
+            to = str(msg.get("To", "Unknown"))
+
+            # Parse actual email date (critical for conflict detection)
+            email_date = None
+            raw_date = msg.get("Date")
+            if raw_date:
+                try:
+                    dt = parsedate_to_datetime(str(raw_date))
+                    email_date = dt.strftime("%Y-%m-%d")
+                except Exception:
+                    email_date = None
+
+            # Extract plain-text body
+            body = ""
+            if msg.is_multipart():
+                for part in msg.walk():
+                    ctype = part.get_content_type()
+                    if ctype == "text/plain":
+                        payload = part.get_content()
+                        if isinstance(payload, str):
+                            body += payload
+            else:
+                payload = msg.get_content()
+                if isinstance(payload, str):
+                    body = payload
+
+            if not body.strip():
+                print(f"[WARN] No text body found in email: {file_path}")
+                return []
+
+            # Split long email threads on common reply/forward markers
+            thread_parts = re.split(
+                r'\n\s*(?:On .+ wrote:|---------- Forwarded message ----------|From:.*Sent:)',
+                body
+            )
+
+            header_line = (
+                f"[Email from: {sender}, To: {to}, "
+                f"Subject: {subject}, Date: {email_date or 'unknown'}]"
+            )
+
+            all_chunks = []
+            for i, part in enumerate(thread_parts):
+                part = part.strip()
+                if not part or len(part) < 20:
+                    continue
+
+                # For long parts, use the existing text splitter
+                if len(part) > 500:
+                    sub_chunks = self._split_into_chunks(part, max_length=500)
+                    for j, sc in enumerate(sub_chunks):
+                        all_chunks.append({
+                            "text": f"{header_line}\n{sc}",
+                            "page": 1,
+                            "line": i + 1,
+                            "section": f"Thread part {i + 1}",
+                            "source_date": email_date,
+                        })
+                else:
+                    all_chunks.append({
+                        "text": f"{header_line}\n{part}",
+                        "page": 1,
+                        "line": i + 1,
+                        "section": f"Thread part {i + 1}" if len(thread_parts) > 1 else "Email body",
+                        "source_date": email_date,
+                    })
+
+            return all_chunks
+        except Exception as e:
+            print(f"[ERROR] Email processing failed: {e}")
             return []

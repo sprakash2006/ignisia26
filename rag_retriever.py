@@ -223,7 +223,7 @@ Your response MUST contain ALL of these sections in order:
             "page": c["page"],
             "line": c.get("line", 1),
             "section": c.get("section", ""),
-            "date_added": today_date
+            "date_added": c.get("source_date") or today_date
         } for c in chunks]
         ids = [f"{filename}_{i}" for i in range(len(chunks))]
 

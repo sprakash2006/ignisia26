@@ -1,32 +1,3 @@
-"""
-Conflict Detection Module for SME Knowledge RAG
-================================================
-
-WHAT THIS DOES (dummy explanation for Darsh):
-────────────────────────────────────────────
-Your existing _detect_duplicates_and_conflicts() does:
-  - Finds duplicate chunks (same text, multiple sources)
-  - Finds key:value mismatches in structured Excel/CSV rows
-
-That's good but LIMITED. It only catches "Price: 500" vs "Price: 650"
-in pipe-separated Excel rows. It completely misses:
-  - PDF saying "refund in 14 days" vs email saying "refund in 30 days"  
-  - Email quoting ₹500/unit vs spreadsheet showing ₹650/unit
-  - Any conflict in unstructured prose
-
-THIS MODULE adds an LLM-powered conflict detector that:
-  1. Takes chunks from DIFFERENT sources
-  2. Asks GPT: "do these contradict each other?"
-  3. If yes → compares dates → picks newer source → explains why
-
-HOW IT PLUGS IN:
-  - rag_retriever.py calls self.conflict_detector.detect_conflicts()
-    right after the existing _detect_duplicates_and_conflicts()
-  - Results get merged into the analysis dict
-  - The system prompt already handles conflict reporting (your existing
-    prompt is great for this — just needs the conflict data fed in)
-"""
-
 import logging
 import json
 import re
@@ -86,7 +57,7 @@ class ConflictDetector:
         if not cross_source_pairs:
             return []
 
-        # Cap at 10 pairs max to stay fast (don't blow API budget)
+        
         cross_source_pairs = cross_source_pairs[:10]
 
         return self._llm_conflict_check(cross_source_pairs)
@@ -142,7 +113,7 @@ If NO conflicts exist, return: {{"conflicts": []}}"""
 
         try:
             response = self.gpt.chat.completions.create(
-                model="gpt-4o-mini",  # fast + cheap for detection
+                model="gpt-4o-mini",  
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=600,
                 temperature=0.0,
