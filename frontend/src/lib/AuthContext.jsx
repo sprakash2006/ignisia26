@@ -36,8 +36,16 @@ export function AuthProvider({ children }) {
     try {
       const profile = await api.get("/auth/me");
       setUser(profile);
-    } catch {
-      setUser(null);
+    } catch (err) {
+      console.error("fetchProfile failed:", err);
+      // Still set user from session so they can access the app
+      setUser({
+        id: s.user.id,
+        email: s.user.email,
+        full_name: s.user.user_metadata?.full_name || s.user.email,
+        role: s.user.user_metadata?.role || "employee",
+        org_id: s.user.user_metadata?.org_id || "",
+      });
     } finally {
       setLoading(false);
     }

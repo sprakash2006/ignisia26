@@ -4,17 +4,6 @@ import csv
 import email
 import email.policy
 from email.utils import parsedate_to_datetime
-from unstructured.partition.pdf import partition_pdf
-from unstructured.partition.docx import partition_docx
-from unstructured.chunking.title import chunk_by_title
-import nltk
-
-# Ensure NLTK resources are available for structure analysis
-try:
-    nltk.download('punkt', quiet=True)
-    nltk.download('averaged_perceptron_tagger', quiet=True)
-except:
-    pass
 
 
 class FileIngestor:
@@ -25,9 +14,9 @@ class FileIngestor:
         all_chunks = []
 
         if ext == ".pdf":
-            all_chunks = self._process_pdf_semantically(file_path)
+            all_chunks = self._process_pdf(file_path)
         elif ext == ".docx":
-            all_chunks = self._process_docx_semantically(file_path)
+            all_chunks = self._process_docx(file_path)
         elif ext == ".xlsx":
             all_chunks = self._process_excel(file_path)
         elif ext == ".csv":
@@ -44,41 +33,56 @@ class FileIngestor:
         print(f"[INFO] Extracted {len(all_chunks)} chunks from {file_path}")
         return all_chunks, filename
 
-    def _process_pdf_semantically(self, file_path):
+    # ── PDF processing (pdfplumber) ─────────────────────────────────
+
+    def _process_pdf(self, file_path):
         try:
-            # Use 'fast' strategy to avoid heavy local dependencies like Tesseract
-            elements = partition_pdf(filename=file_path, strategy="fast")
-            
-            # Chunk elements by title/heading structures
-            chunks = chunk_by_title(
-                elements,
-                max_characters=1000,
-                new_after_n_chars=800,
-                combine_text_under_n_chars=500
-            )
-            
-            processed = []
-            for i, chunk in enumerate(chunks):
-                # Extract page number if available in metadata
-                page_num = 1
-                if hasattr(chunk, 'metadata') and chunk.metadata.page_number:
-                    page_num = chunk.metadata.page_number
-                
-                # Using element index as a pseudo-line number for citation
-                processed.append({"text": chunk.text, "page": page_num, "line": i + 1})
-            return processed
+            import pdfplumber
+            all_chunks = []
+            with pdfplumber.open(file_path) as pdf:
+                for page_num, page in enumerate(pdf.pages, start=1):
+                    text = page.extract_text()
+                    if not text or not text.strip():
+                        continue
+                    # Split page text into chunks
+                    page_chunks = self._split_into_chunks(text, max_length=1000)
+                    for i, chunk in enumerate(page_chunks):
+                        all_chunks.append({
+                            "text": chunk,
+                            "page": page_num,
+                            "line": i + 1,
+                        })
+            return all_chunks
         except Exception as e:
-            print(f"[ERROR] Semantic PDF extraction failed: {e}")
+            print(f"[ERROR] PDF extraction failed: {e}")
             return []
 
-    def _process_docx_semantically(self, file_path):
+    # ── DOCX processing (python-docx) ──────────────────────────────
+
+    def _process_docx(self, file_path):
         try:
-            elements = partition_docx(filename=file_path)
-            chunks = chunk_by_title(elements, max_characters=1000)
-            return [{"text": chunk.text, "page": 1, "line": i + 1} for i, chunk in enumerate(chunks)]
+            from docx import Document
+            doc = Document(file_path)
+            full_text = []
+            current_section = ""
+
+            for para in doc.paragraphs:
+                text = para.text.strip()
+                if not text:
+                    continue
+                # Detect headings for section tracking
+                if para.style and para.style.name.startswith("Heading"):
+                    current_section = text
+                full_text.append(text)
+
+            combined = "\n\n".join(full_text)
+            chunks = self._split_into_chunks(combined, max_length=1000)
+            return [{"text": chunk, "page": 1, "line": i + 1, "section": current_section} for i, chunk in enumerate(chunks)]
         except Exception as e:
-            print(f"[ERROR] Semantic DOCX extraction failed: {e}")
+            print(f"[ERROR] DOCX extraction failed: {e}")
             return []
+
+    # ── Text helpers ────────────────────────────────────────────────
 
     def _extract_text_from_txt(self, file_path):
         with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
@@ -87,7 +91,7 @@ class FileIngestor:
     def _split_into_chunks(self, text, max_length=500):
         if not text.strip():
             return []
-            
+
         # Split by double newline first (paragraphs)
         paragraphs = text.split("\n\n")
         chunks, current_chunk = [], ""
@@ -96,7 +100,7 @@ class FileIngestor:
             para = para.strip()
             if not para:
                 continue
-            
+
             # If a paragraph is still too long, split it by single newline
             if len(para) > max_length:
                 sub_paras = para.split("\n")
@@ -121,6 +125,8 @@ class FileIngestor:
         if current_chunk.strip():
             chunks.append(current_chunk.strip())
         return chunks
+
+    # ── Excel processing ────────────────────────────────────────────
 
     def _process_excel(self, file_path):
         """Process .xlsx files — each row becomes a chunk with column headers as keys."""
@@ -155,6 +161,8 @@ class FileIngestor:
             print(f"[ERROR] Excel processing failed: {e}")
             return []
 
+    # ── CSV processing ──────────────────────────────────────────────
+
     def _process_csv(self, file_path):
         """Process .csv files — each row becomes a chunk with column headers as keys."""
         try:
@@ -184,7 +192,7 @@ class FileIngestor:
             print(f"[ERROR] CSV processing failed: {e}")
             return []
 
-    # ── Email (.eml) processing ──────────────────────────────────────
+    # ── Email (.eml) processing ─────────────────────────────────────
 
     def _process_email(self, file_path):
         """Parse a .eml file and return chunks with email metadata."""
@@ -197,7 +205,7 @@ class FileIngestor:
             subject = str(msg.get("Subject", "(No Subject)"))
             to = str(msg.get("To", "Unknown"))
 
-            # Parse actual email date (critical for conflict detection)
+            # Parse actual email date
             email_date = None
             raw_date = msg.get("Date")
             if raw_date:
@@ -242,7 +250,6 @@ class FileIngestor:
                 if not part or len(part) < 20:
                     continue
 
-                # For long parts, use the existing text splitter
                 if len(part) > 500:
                     sub_chunks = self._split_into_chunks(part, max_length=500)
                     for j, sc in enumerate(sub_chunks):

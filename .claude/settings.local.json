@@ -6,7 +6,15 @@
       "Bash(python -c \"import ast; ast.parse\\(open\\(''app.py''\\).read\\(\\)\\); print\\(''app.py OK''\\)\")",
       "Bash(python -c \"import ast; ast.parse\\(open\\(''app.py'', encoding=''utf-8''\\).read\\(\\)\\); print\\(''app.py OK''\\)\")",
       "Read(//c/AAA Projects/**)",
-      "Bash(python -c \"import zipfile; z = zipfile.ZipFile\\(''frontend.zip''\\); z.extractall\\(''ignisia26/_ref_frontend''\\)\")"
+      "Bash(python -c \"import zipfile; z = zipfile.ZipFile\\(''frontend.zip''\\); z.extractall\\(''ignisia26/_ref_frontend''\\)\")",
+      "Bash(python -c \"from config import settings; print\\(''config OK''\\)\")",
+      "Bash(python -c \"from services.supabase_client import get_admin_client; print\\(''supabase OK''\\)\")",
+      "Bash(python -c \"from dependencies import get_current_user; print\\(''deps OK''\\)\")",
+      "Bash(python -c \"from routers import auth, documents, chat, emails; print\\(''routers OK''\\)\")",
+      "Bash(timeout 20)",
+      "Bash(ping -n 15 127.0.0.1)",
+      "Bash(python -c \":*)",
+      "Bash(python -c \"from main import app; print\\(''FastAPI app OK''\\); print\\(''Routes:''\\); [print\\(f''  {r.methods} {r.path}''\\) for r in app.routes if hasattr\\(r, ''methods''\\)]\")"
     ]
   }
 }
