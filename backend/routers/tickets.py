@@ -213,10 +213,12 @@ async def assign_ticket(ticket_id: str, user: dict = Depends(get_current_user)):
 @router.post("/{ticket_id}/resolve")
 async def resolve_ticket(ticket_id: str, user: dict = Depends(get_current_user)):
     """
-    Resolve a ticket using RAG:
-    1. Search relevant chunks for the ticket query.
-    2. Generate an AI answer grounded in those chunks.
-    3. Format the answer into a professional email body.
+    Resolve a ticket using the FULL RAG pipeline:
+    1. Search relevant chunks with access control.
+    2. Run heuristic duplicate & conflict detection.
+    3. Run LLM-powered cross-source conflict detection.
+    4. Generate AI answer with conflict awareness baked in.
+    5. Format into professional email via email agent.
     """
     sb = get_admin_client()
 
@@ -236,49 +238,41 @@ async def resolve_ticket(ticket_id: str, user: dict = Depends(get_current_user))
     customer_query = ticket_data["query"]
     customer_name = ticket_data["customer_name"]
 
-    # Step 1: RAG search
+    # ── Step 1: Full RAG query (with conflict detection) ──
     rag = get_rag_service()
-    chunks = await rag.search_chunks(customer_query, user["org_id"], user["id"])
+    rag_result = await rag.query(
+        question=customer_query,
+        org_id=user["org_id"],
+        user_id=user["id"],
+        conversation_id=None,  # no conversation — standalone ticket
+        history=[],            # no past conversation history
+    )
 
-    if not chunks:
-        raise HTTPException(
-            status_code=422,
-            detail="No relevant documents found to answer this query",
-        )
+    ai_response = rag_result["content"]
+    sources = rag_result.get("sources", [])
+    analysis = rag_result.get("analysis", {})
 
-    # Build context from chunks
-    context_parts = []
-    for c in chunks:
-        section_str = f", Section: {c.get('section', '')}" if c.get("section") else ""
-        context_parts.append(
-            f"[Source: {c['filename']}, Page: {c['page_number']}, "
-            f"Line/Row: {c['line_number']}{section_str}]\n{c['content']}"
-        )
-    context = "\n\n---\n\n".join(context_parts)
-
-    # Step 2: Generate AI answer (gpt-4o)
+    # ── Step 2: Format into professional email (gpt-4o-mini) ──
     gpt = OpenAI(api_key=settings.OPENAI_API_KEY)
 
-    rag_system_prompt = f"""You are a knowledgeable customer support agent. Answer the customer's question ONLY based on the provided document context. Be clear, helpful, and concise.
-
-If the answer is not available in the context, say so honestly.
-
-## Document Context
-{context}
+    # Build conflict summary for email agent awareness
+    conflict_note = ""
+    if analysis.get("conflicts"):
+        conflict_items = []
+        for c in analysis["conflicts"]:
+            resolution = c.get("resolution", "")
+            if resolution:
+                conflict_items.append(f"- {c.get('field', 'unknown')}: {resolution}")
+            else:
+                vals = ", ".join(f"'{v['value']}' from {v['source']}" for v in c.get("values", []))
+                conflict_items.append(f"- {c.get('field', 'unknown')}: conflicting values — {vals}")
+        conflict_note = f"""
+IMPORTANT: The AI detected data conflicts in the source documents. The answer above already accounts for these.
+Conflicts found:
+{chr(10).join(conflict_items)}
+Make sure the email reflects the resolved/latest values only — do NOT show conflicting data to the customer.
 """
 
-    rag_response = gpt.chat.completions.create(
-        model="gpt-4o",
-        messages=[
-            {"role": "system", "content": rag_system_prompt},
-            {"role": "user", "content": customer_query},
-        ],
-        max_tokens=settings.LLM_MAX_TOKENS,
-        temperature=settings.LLM_TEMPERATURE,
-    )
-    ai_response = rag_response.choices[0].message.content.strip()
-
-    # Step 3: Format into professional email (gpt-4o-mini)
     email_system_prompt = f"""You are an email formatting agent. Take the provided answer and format it into a professional customer support email.
 
 Requirements:
@@ -289,6 +283,9 @@ Requirements:
 - The email should be in HTML format with basic tags (<p>, <br>, <strong>, <ul>, <li>) for clean rendering
 - Do NOT include a subject line — only the email body
 - Keep the tone professional, empathetic, and helpful
+- Do NOT include internal sections like "Data Quality Notes", "Source References", or "Reasoning" — those are internal-only
+- Extract ONLY the final answer and present it cleanly to the customer
+{conflict_note}
 """
 
     email_response = gpt.chat.completions.create(
@@ -297,7 +294,7 @@ Requirements:
             {"role": "system", "content": email_system_prompt},
             {
                 "role": "user",
-                "content": f"Customer query: {customer_query}\n\nAnswer to format:\n{ai_response}",
+                "content": f"Customer query: {customer_query}\n\nFull AI response (internal):\n{ai_response}",
             },
         ],
         max_tokens=settings.LLM_MAX_TOKENS,
@@ -305,7 +302,7 @@ Requirements:
     )
     email_body = email_response.choices[0].message.content.strip()
 
-    # Step 4: Update ticket
+    # ── Step 3: Update ticket ──
     now = datetime.now(timezone.utc).isoformat()
     sb.table("tickets").update({
         "ai_response": ai_response,
@@ -320,6 +317,8 @@ Requirements:
         "message": "Ticket resolved",
         "ai_response": ai_response,
         "email_body": email_body,
+        "sources": sources,
+        "analysis": analysis,
     }
 
 

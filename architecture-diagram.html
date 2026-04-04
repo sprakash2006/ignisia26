@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ignisia26 — System Architecture</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: #0a0a0f;
+            color: #e0e0e0;
+            padding: 30px;
+        }
+        h1 {
+            text-align: center;
+            font-size: 2rem;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .subtitle {
+            text-align: center;
+            color: #888;
+            font-size: 0.95rem;
+            margin-bottom: 40px;
+        }
+        .section {
+            background: #12121a;
+            border: 1px solid #2a2a3a;
+            border-radius: 14px;
+            padding: 30px;
+            margin-bottom: 35px;
+        }
+        .section h2 {
+            font-size: 1.3rem;
+            margin-bottom: 20px;
+            color: #a78bfa;
+            border-bottom: 1px solid #2a2a3a;
+            padding-bottom: 10px;
+        }
+        .mermaid {
+            display: flex;
+            justify-content: center;
+            overflow-x: auto;
+        }
+        .mermaid svg {
+            max-width: 100%;
+        }
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 15px;
+            padding: 15px;
+            background: #1a1a2a;
+            border-radius: 10px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+        }
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+        }
+        .notes {
+            background: #1a1a2a;
+            border-left: 3px solid #f59e0b;
+            padding: 15px 20px;
+            border-radius: 0 10px 10px 0;
+            margin-top: 20px;
+            font-size: 0.9rem;
+            color: #ccc;
+        }
+        .notes strong { color: #f59e0b; }
+    </style>
+</head>
+<body>
+
+<h1>IGNISIA26 — Enterprise RAG System Architecture</h1>
+<p class="subtitle">Multi-format Document Intelligence with Conflict Detection, RBAC, and Ticket Resolution</p>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- DIAGRAM 1: HIGH-LEVEL SYSTEM OVERVIEW -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="section">
+    <h2>1. High-Level System Overview</h2>
+    <div class="mermaid">
+%%{init: {'theme': 'dark', 'themeVariables': { 'fontSize': '14px' }}}%%
+graph TB
+    subgraph EXTERNAL["<b>EXTERNAL SYSTEMS</b>"]
+        direction TB
+        CRM["<b>External CRM / Client Website</b><br/>Customer fills support form<br/>(3rd-party system)"]
+        IMAP["<b>Email Server</b><br/>Gmail / Outlook / Custom<br/>IMAP4_SSL"]
+        OPENAI["<b>OpenAI API</b><br/>GPT-4o &bull; GPT-4o-mini"]
+        SMTP["<b>SMTP Server</b><br/>smtp.gmail.com:465<br/>Sends resolution emails"]
+    end
+
+    subgraph FRONTEND["<b>REACT FRONTEND</b> (Vite SPA)"]
+        direction TB
+        AUTH_UI["Auth Page<br/>Login / Signup"]
+        DASH["Dashboard<br/>RAG Chat Interface"]
+        UPLOAD["Upload Page<br/>Document Management"]
+        EMAIL_UI["Email Page<br/>IMAP Config + Poll"]
+        TICKETS_UI["Tickets Page<br/>List + Resolve + Send"]
+    end
+
+    subgraph BACKEND["<b>FASTAPI BACKEND</b> (Python)"]
+        direction TB
+        AUTH_R["Auth Router<br/>/api/auth/*"]
+        DOC_R["Documents Router<br/>/api/documents/*"]
+        CHAT_R["Chat Router<br/>/api/chat/*"]
+        EMAIL_R["Email Router<br/>/api/emails/*"]
+        TICKET_R["Tickets Router<br/>/api/tickets/*"]
+        RAG["RAG Service<br/>Ingest + Search + Query"]
+        EMBED["Embedding Service<br/>all-MiniLM-L6-v2 (384d)"]
+        CONFLICT["Conflict Detector<br/>Heuristic + LLM"]
+        INGESTOR["File Ingestor<br/>PDF DOCX XLSX CSV TXT EML"]
+        EMAILFETCH["Email Fetcher<br/>IMAP Polling + Dedup"]
+    end
+
+    subgraph SUPABASE["<b>SUPABASE CLOUD</b>"]
+        direction TB
+        SB_AUTH["Supabase Auth<br/>JWT + Sessions"]
+        SB_DB["PostgreSQL + pgvector<br/>Tables, RLS, Functions"]
+        SB_STORE["Supabase Storage<br/>Raw File Storage"]
+    end
+
+    CRM -->|"POST /api/tickets/raise<br/>(public endpoint)"| TICKET_R
+    IMAP -->|"IMAP4_SSL fetch"| EMAILFETCH
+
+    AUTH_UI --> AUTH_R
+    DASH --> CHAT_R
+    UPLOAD --> DOC_R
+    EMAIL_UI --> EMAIL_R
+    TICKETS_UI --> TICKET_R
+
+    AUTH_R --> SB_AUTH
+    DOC_R --> RAG
+    CHAT_R --> RAG
+    EMAIL_R --> EMAILFETCH
+    TICKET_R --> RAG
+
+    RAG --> EMBED
+    RAG --> CONFLICT
+    RAG --> INGESTOR
+    RAG --> OPENAI
+    RAG --> SB_DB
+    CONFLICT --> OPENAI
+    EMBED --> SB_DB
+    EMAILFETCH --> IMAP
+    EMAILFETCH --> INGESTOR
+
+    TICKET_R -->|"Send resolution email"| SMTP
+    DOC_R --> SB_STORE
+
+    AUTH_R --> SB_DB
+    TICKET_R --> SB_DB
+
+    style EXTERNAL fill:#1e1e2e,stroke:#f59e0b,stroke-width:2px,color:#f59e0b
+    style FRONTEND fill:#1e1e2e,stroke:#60a5fa,stroke-width:2px,color:#60a5fa
+    style BACKEND fill:#1e1e2e,stroke:#a78bfa,stroke-width:2px,color:#a78bfa
+    style SUPABASE fill:#1e1e2e,stroke:#34d399,stroke-width:2px,color:#34d399
+
+    style CRM fill:#422006,stroke:#f59e0b,color:#fbbf24
+    style IMAP fill:#422006,stroke:#f59e0b,color:#fbbf24
+    style OPENAI fill:#422006,stroke:#f59e0b,color:#fbbf24
+    style SMTP fill:#422006,stroke:#f59e0b,color:#fbbf24
+
+    style AUTH_UI fill:#172554,stroke:#60a5fa,color:#93c5fd
+    style DASH fill:#172554,stroke:#60a5fa,color:#93c5fd
+    style UPLOAD fill:#172554,stroke:#60a5fa,color:#93c5fd
+    style EMAIL_UI fill:#172554,stroke:#60a5fa,color:#93c5fd
+    style TICKETS_UI fill:#172554,stroke:#60a5fa,color:#93c5fd
+
+    style RAG fill:#2e1065,stroke:#a78bfa,color:#c4b5fd
+    style EMBED fill:#2e1065,stroke:#a78bfa,color:#c4b5fd
+    style CONFLICT fill:#2e1065,stroke:#a78bfa,color:#c4b5fd
+    style INGESTOR fill:#2e1065,stroke:#a78bfa,color:#c4b5fd
+    style EMAILFETCH fill:#2e1065,stroke:#a78bfa,color:#c4b5fd
+    style AUTH_R fill:#2e1065,stroke:#a78bfa,color:#c4b5fd
+    style DOC_R fill:#2e1065,stroke:#a78bfa,color:#c4b5fd
+    style CHAT_R fill:#2e1065,stroke:#a78bfa,color:#c4b5fd
+    style EMAIL_R fill:#2e1065,stroke:#a78bfa,color:#c4b5fd
+    style TICKET_R fill:#2e1065,stroke:#a78bfa,color:#c4b5fd
+
+    style SB_AUTH fill:#064e3b,stroke:#34d399,color:#6ee7b7
+    style SB_DB fill:#064e3b,stroke:#34d399,color:#6ee7b7
+    style SB_STORE fill:#064e3b,stroke:#34d399,color:#6ee7b7
+    </div>
+
+    <div class="legend">
+        <div class="legend-item"><div class="legend-color" style="background:#f59e0b"></div> External Systems (3rd-party)</div>
+        <div class="legend-item"><div class="legend-color" style="background:#60a5fa"></div> React Frontend (SPA)</div>
+        <div class="legend-item"><div class="legend-color" style="background:#a78bfa"></div> FastAPI Backend (Python)</div>
+        <div class="legend-item"><div class="legend-color" style="background:#34d399"></div> Supabase Cloud (DB + Auth + Storage)</div>
+    </div>
+
+    <div class="notes">
+        <strong>Note:</strong> The CRM form (ticket raising) is on an <b>external 3rd-party system</b> — not hosted on Ignisia.
+        It hits the public <code>POST /api/tickets/raise</code> endpoint via API. The external system collects customer info
+        (name, email, phone, subject, query, category, priority) and sends it to Ignisia's backend.
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- DIAGRAM 2: DATABASE SCHEMA (ER DIAGRAM) -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="section">
+    <h2>2. Database Schema (Entity Relationship)</h2>
+    <div class="mermaid">
+%%{init: {'theme': 'dark', 'themeVariables': { 'fontSize': '13px' }}}%%
+erDiagram
+    organizations ||--o{ profiles : "has members"
+    organizations ||--o{ documents : "owns"
+    organizations ||--o{ conversations : "contains"
+    organizations ||--o{ tickets : "receives"
+    organizations ||--o{ audit_log : "tracks"
+
+    profiles ||--o{ documents : "uploads"
+    profiles ||--o{ conversations : "creates"
+    profiles ||--o{ messages : "sends"
+    profiles ||--o{ email_configs : "configures"
+    profiles ||--o{ tickets : "resolves"
+    profiles ||--o{ ticket_notes : "writes"
+    profiles }o--o| profiles : "reports_to"
+
+    documents ||--o{ chunks : "split into"
+    conversations ||--o{ messages : "contains"
+    tickets ||--o{ ticket_notes : "has"
+
+    organizations {
+        uuid id PK
+        string name
+        string slug UK
+    }
+
+    profiles {
+        uuid id PK
+        uuid org_id FK
+        string full_name
+        string email
+        enum role "director|manager|employee"
+        uuid reports_to FK
+        string avatar_url
+    }
+
+    documents {
+        uuid id PK
+        uuid org_id FK
+        uuid owner_id FK
+        string filename
+        string file_type
+        enum visibility "shared|private"
+        enum source_type "upload|email"
+        string storage_path
+        int chunk_count
+        enum status "processing|ready|failed"
+    }
+
+    chunks {
+        uuid id PK
+        uuid document_id FK
+        uuid org_id FK
+        text content
+        vector embedding "384 dimensions"
+        int page_number
+        int line_number
+        string section
+        date date_added
+        int chunk_index
+    }
+
+    conversations {
+        uuid id PK
+        uuid org_id FK
+        uuid user_id FK
+        string title
+    }
+
+    messages {
+        uuid id PK
+        uuid conversation_id FK
+        enum role "user|assistant"
+        text content
+        jsonb sources
+        jsonb analysis
+    }
+
+    email_configs {
+        uuid id PK
+        uuid user_id FK
+        uuid org_id FK
+        string imap_server
+        string email_address
+        string encrypted_password
+        string folder
+        boolean is_active
+    }
+
+    tickets {
+        uuid id PK
+        uuid org_id FK
+        uuid raised_by FK
+        string customer_name
+        string customer_email
+        string subject
+        text query
+        enum status "open|in_progress|resolved|closed"
+        uuid assigned_to FK
+        text ai_response
+        text email_body
+        boolean email_sent
+    }
+
+    ticket_notes {
+        uuid id PK
+        uuid ticket_id FK
+        uuid user_id FK
+        text content
+    }
+
+    audit_log {
+        uuid id PK
+        uuid org_id FK
+        uuid user_id FK
+        enum action "query|upload|delete|email_ingest"
+        jsonb details
+    }
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- DIAGRAM 3: RAG QUERY PIPELINE -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="section">
+    <h2>3. RAG Query Pipeline (Core Intelligence)</h2>
+    <div class="mermaid">
+%%{init: {'theme': 'dark', 'themeVariables': { 'fontSize': '13px' }}}%%
+flowchart LR
+    Q["User Question"] --> EMB["Generate Embedding<br/><i>all-MiniLM-L6-v2</i><br/>384 dimensions"]
+    EMB --> SEARCH["Vector Similarity Search<br/><i>match_chunks() RPC</i><br/>pgvector HNSW index<br/>Top-15, threshold 0.3"]
+    SEARCH --> ACCESS{"RBAC Access<br/>Filter"}
+    ACCESS -->|"Employee"| OWN["Shared + Own docs"]
+    ACCESS -->|"Manager"| MGR["+ Subordinates' docs"]
+    ACCESS -->|"Director"| ALL["All org docs"]
+
+    OWN --> CHUNKS["Retrieved Chunks<br/>with metadata"]
+    MGR --> CHUNKS
+    ALL --> CHUNKS
+
+    CHUNKS --> HEURISTIC["Heuristic Detection<br/>- Exact text dedup<br/>- Key:Value conflict scan"]
+    HEURISTIC --> LLM_CONFLICT["LLM Conflict Detection<br/><i>GPT-4o-mini</i><br/>Cross-source contradiction<br/>analysis"]
+    LLM_CONFLICT --> RESOLVE["Conflict Resolution<br/>1. Newer date wins<br/>2. File type priority<br/>xlsx > pdf > txt > eml"]
+
+    RESOLVE --> PROMPT["Build System Prompt<br/>- User context & role<br/>- Retrieved chunks<br/>- Conflict advisory<br/>- Answer format rules"]
+    PROMPT --> GPT["GPT-4o<br/>temp=0.2<br/>max_tokens=2000"]
+    GPT --> ANSWER["Structured Response<br/>- Final Answer<br/>- Data Quality Notes<br/>- Source References<br/>- Reasoning"]
+    ANSWER --> PERSIST["Persist to DB<br/>messages table<br/>+ sources + analysis"]
+
+    style Q fill:#172554,stroke:#60a5fa,color:#93c5fd
+    style EMB fill:#2e1065,stroke:#a78bfa,color:#c4b5fd
+    style SEARCH fill:#064e3b,stroke:#34d399,color:#6ee7b7
+    style ACCESS fill:#422006,stroke:#f59e0b,color:#fbbf24
+    style OWN fill:#1e1e2e,stroke:#666,color:#ccc
+    style MGR fill:#1e1e2e,stroke:#666,color:#ccc
+    style ALL fill:#1e1e2e,stroke:#666,color:#ccc
+    style CHUNKS fill:#064e3b,stroke:#34d399,color:#6ee7b7
+    style HEURISTIC fill:#2e1065,stroke:#a78bfa,color:#c4b5fd
+    style LLM_CONFLICT fill:#422006,stroke:#f59e0b,color:#fbbf24
+    style RESOLVE fill:#422006,stroke:#f59e0b,color:#fbbf24
+    style PROMPT fill:#2e1065,stroke:#a78bfa,color:#c4b5fd
+    style GPT fill:#422006,stroke:#f59e0b,color:#fbbf24
+    style ANSWER fill:#172554,stroke:#60a5fa,color:#93c5fd
+    style PERSIST fill:#064e3b,stroke:#34d399,color:#6ee7b7
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- DIAGRAM 4: DOCUMENT INGESTION PIPELINE -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="section">
+    <h2>4. Document Ingestion Pipeline</h2>
+    <div class="mermaid">
+%%{init: {'theme': 'dark', 'themeVariables': { 'fontSize': '13px' }}}%%
+flowchart TB
+    subgraph SOURCES["<b>Document Sources</b>"]
+        UPLOAD_SRC["Manual Upload<br/>(Web UI)"]
+        EMAIL_SRC["Email Polling<br/>(IMAP)"]
+    end
+
+    UPLOAD_SRC --> VALIDATE["Validate File Type<br/>PDF | DOCX | XLSX | CSV | TXT | EML"]
+    EMAIL_SRC --> DEDUP["Deduplicate<br/>by Message-ID"] --> VALIDATE
+
+    VALIDATE --> PARSE{"File Ingestor<br/>(Format Router)"}
+
+    PARSE -->|PDF| PDF_P["Page-by-page extraction<br/>Chunk by 1000 chars"]
+    PARSE -->|DOCX| DOCX_P["Paragraph extraction<br/>Heading-aware sections"]
+    PARSE -->|XLSX/CSV| XLSX_P["Row-level chunks<br/>Column headers as keys"]
+    PARSE -->|TXT| TXT_P["Split by<br/>double-newlines"]
+    PARSE -->|EML| EML_P["Thread parsing<br/>Subject/From/Date metadata"]
+
+    PDF_P --> CHUNKS["Chunk List<br/>{text, page, line, section, source_date}"]
+    DOCX_P --> CHUNKS
+    XLSX_P --> CHUNKS
+    TXT_P --> CHUNKS
+    EML_P --> CHUNKS
+
+    CHUNKS --> DB_DOC["Create document record<br/>status = processing"]
+    DB_DOC --> EMBEDDINGS["Generate Embeddings<br/>all-MiniLM-L6-v2<br/>Batch processing"]
+    EMBEDDINGS --> DB_CHUNKS["Insert chunks + embeddings<br/>pgvector (384d)"]
+    DB_CHUNKS --> STORAGE["Store raw file<br/>Supabase Storage"]
+    STORAGE --> READY["Mark document<br/>status = ready"]
+    READY --> AUDIT["Log to audit_log"]
+
+    style SOURCES fill:#1e1e2e,stroke:#60a5fa,stroke-width:2px,color:#60a5fa
+    style UPLOAD_SRC fill:#172554,stroke:#60a5fa,color:#93c5fd
+    style EMAIL_SRC fill:#172554,stroke:#60a5fa,color:#93c5fd
+    style VALIDATE fill:#2e1065,stroke:#a78bfa,color:#c4b5fd
+    style DEDUP fill:#2e1065,stroke:#a78bfa,color:#c4b5fd
+    style PARSE fill:#422006,stroke:#f59e0b,color:#fbbf24
+    style PDF_P fill:#1e1e2e,stroke:#666,color:#ccc
+    style DOCX_P fill:#1e1e2e,stroke:#666,color:#ccc
+    style XLSX_P fill:#1e1e2e,stroke:#666,color:#ccc
+    style TXT_P fill:#1e1e2e,stroke:#666,color:#ccc
+    style EML_P fill:#1e1e2e,stroke:#666,color:#ccc
+    style CHUNKS fill:#2e1065,stroke:#a78bfa,color:#c4b5fd
+    style DB_DOC fill:#064e3b,stroke:#34d399,color:#6ee7b7
+    style EMBEDDINGS fill:#422006,stroke:#f59e0b,color:#fbbf24
+    style DB_CHUNKS fill:#064e3b,stroke:#34d399,color:#6ee7b7
+    style STORAGE fill:#064e3b,stroke:#34d399,color:#6ee7b7
+    style READY fill:#064e3b,stroke:#34d399,color:#6ee7b7
+    style AUDIT fill:#064e3b,stroke:#34d399,color:#6ee7b7
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- DIAGRAM 5: TICKET LIFECYCLE -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="section">
+    <h2>5. Ticket Lifecycle (End-to-End)</h2>
+    <div class="mermaid">
+%%{init: {'theme': 'dark', 'themeVariables': { 'fontSize': '13px' }}}%%
+flowchart TB
+    CUSTOMER["Customer on<br/><b>External CRM System</b><br/>(3rd-party website)"]
+    CUSTOMER -->|"API call: POST /api/tickets/raise<br/>name, email, phone, subject,<br/>query, category, priority"| API["Ignisia Backend<br/><b>Tickets Router</b><br/>(public endpoint, no auth)"]
+
+    API --> CREATE["Create Ticket<br/>status = <b>open</b>"]
+    CREATE --> LIST["Support Agent views<br/>Ticket List<br/>(Ignisia Web App)"]
+
+    LIST --> ASSIGN["Agent clicks<br/><b>Assign to Me</b><br/>status = <b>in_progress</b>"]
+
+    ASSIGN --> RESOLVE["Agent clicks <b>Resolve</b>"]
+    RESOLVE --> RAG["Full RAG Pipeline<br/>Search + Conflict Detection<br/>+ GPT-4o Answer"]
+    RAG --> FORMAT["GPT-4o-mini<br/>Format as professional<br/>HTML email"]
+    FORMAT --> DRAFT["Agent reviews<br/><b>Email Draft</b><br/>Can edit before sending"]
+
+    DRAFT -->|"Happy with draft"| SEND["<b>Send Email</b><br/>SMTP gmail:465<br/>status = <b>closed</b>"]
+    DRAFT -->|"Needs edits"| EDIT["Edit email body<br/>PATCH /email-body"] --> DRAFT
+
+    SEND --> DONE["Ticket Closed<br/>email_sent = true<br/>Audit logged"]
+
+    NOTES["Internal Notes<br/>Agent collaboration<br/>on ticket"] -.-> ASSIGN
+
+    style CUSTOMER fill:#422006,stroke:#f59e0b,color:#fbbf24,stroke-width:2px
+    style API fill:#2e1065,stroke:#a78bfa,color:#c4b5fd
+    style CREATE fill:#064e3b,stroke:#34d399,color:#6ee7b7
+    style LIST fill:#172554,stroke:#60a5fa,color:#93c5fd
+    style ASSIGN fill:#172554,stroke:#60a5fa,color:#93c5fd
+    style RESOLVE fill:#172554,stroke:#60a5fa,color:#93c5fd
+    style RAG fill:#2e1065,stroke:#a78bfa,color:#c4b5fd
+    style FORMAT fill:#422006,stroke:#f59e0b,color:#fbbf24
+    style DRAFT fill:#172554,stroke:#60a5fa,color:#93c5fd
+    style EDIT fill:#172554,stroke:#60a5fa,color:#93c5fd
+    style SEND fill:#422006,stroke:#f59e0b,color:#fbbf24
+    style DONE fill:#064e3b,stroke:#34d399,color:#6ee7b7
+    style NOTES fill:#1e1e2e,stroke:#666,color:#999
+    </div>
+
+    <div class="notes">
+        <strong>Key:</strong> The customer never interacts with Ignisia directly. They fill the form on an <b>external CRM/client website</b>,
+        which calls Ignisia's public API endpoint. Support agents then manage the full lifecycle (assign → resolve via AI → review → send email)
+        from within the Ignisia web app.
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- DIAGRAM 6: RBAC HIERARCHY -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="section">
+    <h2>6. RBAC & Data Access Model</h2>
+    <div class="mermaid">
+%%{init: {'theme': 'dark', 'themeVariables': { 'fontSize': '13px' }}}%%
+flowchart TB
+    subgraph ORG["<b>Organization</b>"]
+        DIR["<b>Director</b><br/>Sees ALL documents<br/>Full audit log access"]
+        MGR1["<b>Manager</b><br/>Sees shared + own +<br/>all subordinates' docs"]
+        EMP1["<b>Employee</b><br/>Sees shared + own<br/>private docs only"]
+        EMP2["<b>Employee</b><br/>Sees shared + own<br/>private docs only"]
+    end
+
+    DIR -->|"reports_to"| MGR1
+    MGR1 -->|"reports_to"| EMP1
+    MGR1 -->|"reports_to"| EMP2
+
+    subgraph DOCS["<b>Document Visibility</b>"]
+        SHARED["Shared Documents<br/>Visible to entire org"]
+        PRIV_DIR["Director's Private Docs<br/>Only director sees"]
+        PRIV_MGR["Manager's Private Docs<br/>Director + Manager see"]
+        PRIV_EMP1["Employee 1's Private Docs<br/>Director + Manager + Emp1 see"]
+        PRIV_EMP2["Employee 2's Private Docs<br/>Director + Manager + Emp2 see"]
+    end
+
+    DIR -.->|"can see"| SHARED
+    DIR -.->|"can see"| PRIV_DIR
+    DIR -.->|"can see"| PRIV_MGR
+    DIR -.->|"can see"| PRIV_EMP1
+    DIR -.->|"can see"| PRIV_EMP2
+
+    MGR1 -.->|"can see"| SHARED
+    MGR1 -.->|"can see"| PRIV_MGR
+    MGR1 -.->|"can see"| PRIV_EMP1
+    MGR1 -.->|"can see"| PRIV_EMP2
+
+    EMP1 -.->|"can see"| SHARED
+    EMP1 -.->|"can see"| PRIV_EMP1
+
+    EMP2 -.->|"can see"| SHARED
+    EMP2 -.->|"can see"| PRIV_EMP2
+
+    style ORG fill:#1e1e2e,stroke:#a78bfa,stroke-width:2px,color:#a78bfa
+    style DOCS fill:#1e1e2e,stroke:#34d399,stroke-width:2px,color:#34d399
+    style DIR fill:#422006,stroke:#f59e0b,color:#fbbf24
+    style MGR1 fill:#2e1065,stroke:#a78bfa,color:#c4b5fd
+    style EMP1 fill:#172554,stroke:#60a5fa,color:#93c5fd
+    style EMP2 fill:#172554,stroke:#60a5fa,color:#93c5fd
+    style SHARED fill:#064e3b,stroke:#34d399,color:#6ee7b7
+    style PRIV_DIR fill:#422006,stroke:#f59e0b,color:#fbbf24
+    style PRIV_MGR fill:#2e1065,stroke:#a78bfa,color:#c4b5fd
+    style PRIV_EMP1 fill:#172554,stroke:#60a5fa,color:#93c5fd
+    style PRIV_EMP2 fill:#172554,stroke:#60a5fa,color:#93c5fd
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- DIAGRAM 7: TECH STACK SUMMARY -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="section">
+    <h2>7. Technology Stack</h2>
+    <div class="mermaid">
+%%{init: {'theme': 'dark', 'themeVariables': { 'fontSize': '13px' }}}%%
+block-beta
+    columns 4
+
+    block:FE["FRONTEND"]:1
+        columns 1
+        A["React 19"]
+        B["Vite"]
+        C["React Router 7"]
+        D["Supabase JS SDK"]
+        E["react-markdown"]
+    end
+
+    block:BE["BACKEND"]:1
+        columns 1
+        F["FastAPI"]
+        G["sentence-transformers"]
+        H["python-docx"]
+        I["pdfplumber"]
+        J["openpyxl"]
+    end
+
+    block:AI["AI / ML"]:1
+        columns 1
+        K["GPT-4o (answers)"]
+        L["GPT-4o-mini (conflicts)"]
+        M["all-MiniLM-L6-v2"]
+        N["pgvector HNSW"]
+        O["Conflict Detector"]
+    end
+
+    block:INFRA["INFRASTRUCTURE"]:1
+        columns 1
+        P["Supabase Auth"]
+        Q["PostgreSQL + pgvector"]
+        R["Supabase Storage"]
+        S["IMAP4_SSL"]
+        T["SMTP (Gmail)"]
+    end
+
+    style FE fill:#172554,stroke:#60a5fa,color:#93c5fd
+    style BE fill:#2e1065,stroke:#a78bfa,color:#c4b5fd
+    style AI fill:#422006,stroke:#f59e0b,color:#fbbf24
+    style INFRA fill:#064e3b,stroke:#34d399,color:#6ee7b7
+    </div>
+</div>
+
+<script>
+    mermaid.initialize({
+        startOnLoad: true,
+        theme: 'dark',
+        securityLevel: 'loose',
+        flowchart: {
+            useMaxWidth: true,
+            htmlLabels: true,
+            curve: 'basis'
+        }
+    });
+</script>
+
+</body>
+</html>
