@@ -17,3 +17,19 @@ rag_store/
 # OS
 Thumbs.db
 .DS_Store
+
+.gemini
+.claude
+.cursor
+.agent
+.codex
+.antigravity
+
+# Node & Frontend
+node_modules/
+dist/
+build/
+.npm/
+
+# Virtual Environments
+venv/

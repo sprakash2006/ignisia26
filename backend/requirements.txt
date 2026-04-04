@@ -1,0 +1,20 @@
+# Backend API
+fastapi
+uvicorn[standard]
+python-multipart
+pydantic[email]
+
+# Supabase
+supabase
+
+# AI / ML
+openai
+sentence-transformers
+
+# Document processing
+python-docx
+openpyxl
+pdfplumber
+
+# Utils
+python-dotenv
