@@ -5,7 +5,7 @@ Ignisia26 — Enterprise RAG Pipeline API
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from routers import auth, documents, chat, emails
+from routers import auth, documents, chat, emails, tickets
 
 app = FastAPI(
     title="Ignisia26 API",
@@ -27,6 +27,7 @@ app.include_router(auth.router, prefix="/api")
 app.include_router(documents.router, prefix="/api")
 app.include_router(chat.router, prefix="/api")
 app.include_router(emails.router, prefix="/api")
+app.include_router(tickets.router, prefix="/api")
 
 
 @app.get("/api/health")

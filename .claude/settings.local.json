@@ -14,7 +14,8 @@
       "Bash(timeout 20)",
       "Bash(ping -n 15 127.0.0.1)",
       "Bash(python -c \":*)",
-      "Bash(python -c \"from main import app; print\\(''FastAPI app OK''\\); print\\(''Routes:''\\); [print\\(f''  {r.methods} {r.path}''\\) for r in app.routes if hasattr\\(r, ''methods''\\)]\")"
+      "Bash(python -c \"from main import app; print\\(''FastAPI app OK''\\); print\\(''Routes:''\\); [print\\(f''  {r.methods} {r.path}''\\) for r in app.routes if hasattr\\(r, ''methods''\\)]\")",
+      "Bash(python -c \"from main import app; print\\(''OK''\\)\")"
     ]
   }
 }

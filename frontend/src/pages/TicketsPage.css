@@ -1,0 +1,97 @@
+/* ═══════════════════════════════════════
+   TicketsPage.css — ContextIQ Theme
+═══════════════════════════════════════ */
+
+@keyframes fade-up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: none; } }
+.tk-page .animate-fade-up { animation: fade-up .5s cubic-bezier(.16,1,.3,1) both; }
+
+.tk-page { display: flex; min-height: 100vh; }
+.tk-main { flex: 1; overflow-y: auto; background: var(--ciq-bg); }
+.tk-inner { max-width: 920px; margin: 0 auto; padding: 40px 32px 80px; display: flex; flex-direction: column; gap: 24px; }
+
+/* Header */
+.tk-header { margin-bottom: 4px; }
+.tk-title { font-family: var(--ciq-serif, Georgia); font-size: 32px; color: var(--ciq-ink); line-height: 1.1; margin: 0; }
+.tk-sub { font-size: 14px; color: var(--ciq-ash); margin-top: 8px; line-height: 1.6; }
+
+/* Stats */
+.tk-stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+.tk-stat-card { background: var(--ciq-white); border: 1.5px solid var(--ciq-border); border-radius: var(--ciq-r-xl, 16px); padding: 18px 16px; text-align: center; transition: border-color .2s, transform .15s; }
+.tk-stat-card:hover { transform: translateY(-2px); }
+.tk-stat-value { font-size: 28px; font-weight: 800; color: var(--ciq-ink); letter-spacing: -1px; }
+.tk-stat-label { font-size: 11px; font-weight: 600; color: var(--ciq-ash); text-transform: uppercase; letter-spacing: .5px; margin-top: 4px; }
+
+.tk-stat-total { border-left: 3px solid var(--ciq-emerald); }
+.tk-stat-open { border-left: 3px solid #f59e0b; }
+.tk-stat-in-progress { border-left: 3px solid #3b82f6; }
+.tk-stat-resolved { border-left: 3px solid var(--ciq-emerald); }
+.tk-stat-closed { border-left: 3px solid #9ca3af; }
+
+/* Filters */
+.tk-filters { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.tk-tabs { display: flex; gap: 4px; background: var(--ciq-white); border: 1.5px solid var(--ciq-border); border-radius: var(--ciq-r-md, 10px); padding: 3px; }
+.tk-tab { padding: 8px 14px; border-radius: 7px; font-size: 12px; font-weight: 600; color: var(--ciq-ash); border: none; background: transparent; cursor: pointer; transition: all .2s; white-space: nowrap; }
+.tk-tab:hover { color: var(--ciq-ink); }
+.tk-tab.active { background: var(--ciq-emerald); color: white; box-shadow: 0 2px 6px rgba(0,180,120,.2); }
+.tk-search { flex: 1; min-width: 200px; background: var(--ciq-white); border: 1.5px solid var(--ciq-border); border-radius: var(--ciq-r-md, 10px); padding: 10px 14px; font-size: 13px; color: var(--ciq-ink); outline: none; font-family: var(--ciq-sans); transition: border-color .2s, box-shadow .2s; }
+.tk-search:focus { border-color: var(--ciq-emerald); box-shadow: 0 0 0 3px var(--ciq-emerald-dim, rgba(0,180,120,.1)); }
+.tk-search::placeholder { color: var(--ciq-mist); }
+
+/* Ticket list */
+.tk-list { display: flex; flex-direction: column; gap: 8px; }
+.tk-ticket-card { background: var(--ciq-white); border: 1.5px solid var(--ciq-border); border-radius: var(--ciq-r-xl, 16px); padding: 18px 22px; cursor: pointer; transition: border-color .2s, transform .15s, box-shadow .2s; }
+.tk-ticket-card:hover { border-color: var(--ciq-emerald); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0,180,120,.06); }
+
+.tk-ticket-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+.tk-ticket-subject { font-size: 15px; font-weight: 700; color: var(--ciq-ink); line-height: 1.3; flex: 1; }
+.tk-ticket-time { font-size: 11px; color: var(--ciq-mist); white-space: nowrap; margin-top: 2px; }
+
+.tk-ticket-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.tk-ticket-email { font-size: 12px; color: var(--ciq-ash); margin-right: 4px; }
+
+/* Badges */
+.tk-badge { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; text-transform: capitalize; }
+.tk-cat { background: var(--ciq-bg); color: var(--ciq-ash); border: 1px solid var(--ciq-border); }
+
+.tk-status-amber { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+.tk-status-blue { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
+.tk-status-green { background: var(--ciq-emerald-dim, #d1fae5); color: #065f46; border: 1px solid var(--ciq-border-em, #a7f3d0); }
+.tk-status-gray { background: #f3f4f6; color: #6b7280; border: 1px solid #e5e7eb; }
+
+.tk-priority-gray { background: #f3f4f6; color: #6b7280; border: 1px solid #e5e7eb; }
+.tk-priority-amber { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+.tk-priority-orange { background: #ffedd5; color: #9a3412; border: 1px solid #fed7aa; }
+.tk-priority-red { background: var(--ciq-red-dim, #fef0f0); color: var(--ciq-red, #dc2626); border: 1px solid var(--ciq-red-border, #fca5a5); }
+
+/* Empty */
+.tk-empty { text-align: center; padding: 60px 20px; color: var(--ciq-mist); }
+.tk-empty-icon { font-size: 40px; margin-bottom: 12px; }
+.tk-empty p { font-size: 14px; }
+
+/* Pagination */
+.tk-pagination { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 20px 0 8px; flex-wrap: wrap; }
+
+.tk-page-btn { padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--ciq-ash); background: var(--ciq-white); border: 1.5px solid var(--ciq-border); cursor: pointer; transition: all .2s; }
+.tk-page-btn:hover:not(:disabled) { border-color: var(--ciq-emerald); color: var(--ciq-emerald); }
+.tk-page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.tk-page-numbers { display: flex; align-items: center; gap: 4px; }
+
+.tk-page-num { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--ciq-ash); background: var(--ciq-white); border: 1.5px solid var(--ciq-border); cursor: pointer; transition: all .2s; }
+.tk-page-num:hover { border-color: var(--ciq-emerald); color: var(--ciq-emerald); }
+.tk-page-num.active { background: var(--ciq-emerald); color: white; border-color: var(--ciq-emerald); box-shadow: 0 2px 8px rgba(0,180,120,.25); }
+
+.tk-page-dots { font-size: 14px; color: var(--ciq-mist); padding: 0 4px; user-select: none; }
+
+.tk-page-info { font-size: 12px; color: var(--ciq-mist); margin-left: 12px; white-space: nowrap; }
+
+@media (max-width: 768px) {
+  .tk-inner { padding: 24px 16px 60px; }
+  .tk-stats { grid-template-columns: repeat(3, 1fr); }
+  .tk-filters { flex-direction: column; align-items: stretch; }
+  .tk-tabs { overflow-x: auto; }
+}
+
+@media (max-width: 480px) {
+  .tk-stats { grid-template-columns: repeat(2, 1fr); }
+}

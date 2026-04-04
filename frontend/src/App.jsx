@@ -5,6 +5,9 @@ import AuthPage from "./pages/Authpage";
 import DashboardPage from "./pages/Dashboardpage";
 import UploadPage from "./pages/Uploadpage";
 import EmailPage from "./pages/Emailpage";
+import RaiseTicketPage from "./pages/RaiseTicketPage";
+import TicketsPage from "./pages/TicketsPage";
+import ResolveTicketPage from "./pages/ResolveTicketPage";
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -32,6 +35,9 @@ function App() {
       <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
       <Route path="/upload" element={<ProtectedRoute><UploadPage /></ProtectedRoute>} />
       <Route path="/emails" element={<ProtectedRoute><EmailPage /></ProtectedRoute>} />
+      <Route path="/raise-ticket" element={<RaiseTicketPage />} />
+      <Route path="/tickets" element={<ProtectedRoute><TicketsPage /></ProtectedRoute>} />
+      <Route path="/tickets/:id" element={<ProtectedRoute><ResolveTicketPage /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

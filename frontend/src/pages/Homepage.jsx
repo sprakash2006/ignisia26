@@ -102,6 +102,7 @@ export default function HomePage() {
           <button className="nav-link-btn" onClick={() => scrollTo("features")}>Product</button>
           <button className="nav-link-btn" onClick={() => scrollTo("how")}>How it works</button>
           <button className="nav-link-btn" onClick={() => scrollTo("pricing")}>Pricing</button>
+          <button className="nav-link-btn" onClick={() => navigate("/raise-ticket")}>Raise a Ticket</button>
           <button className="nav-btn-ghost" onClick={goAuth}>{user ? "Dashboard" : "Log in"}</button>
           {!user && <button className="nav-btn-solid" onClick={goRegister}>Get started</button>}
         </div>
@@ -347,6 +348,7 @@ export default function HomePage() {
         <p className="reveal delay-1">Set up in minutes. No engineering required. Your company's knowledge, always within reach.</p>
         <div className="cta-btn-row reveal delay-2">
           <button className="cta-primary" onClick={goRegister}>Start for free</button>
+          <button className="cta-secondary" onClick={() => navigate("/raise-ticket")}>Raise a Ticket</button>
           <button className="cta-secondary" onClick={goAuth}>See a demo ↗</button>
         </div>
       </section>

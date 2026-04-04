@@ -6,6 +6,7 @@ const NAV_ITEMS = [
   { icon: "💬", label: "Ask Agent",    to: "/dashboard" },
   { icon: "📁", label: "Documents",    to: "/upload" },
   { icon: "📧", label: "Emails",       to: "/emails" },
+  { icon: "🎫", label: "Tickets",      to: "/tickets" },
 ];
 
 export default function Sidebar() {
