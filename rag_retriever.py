@@ -21,10 +21,8 @@ class RAGRetriever:
         self.conflict_detector = ConflictDetector(self.gpt)
 
     def _detect_duplicates_and_conflicts(self, retrieved_docs, metadatas):
-        """Analyze retrieved chunks for duplicate and conflicting data."""
         analysis = {"duplicates": [], "conflicts": [], "unique_sources": set()}
 
-        # Group chunks by normalized content to find exact/near duplicates
         content_map = defaultdict(list)
         for doc, meta in zip(retrieved_docs, metadatas):
             normalized = doc.strip().lower()
@@ -39,12 +37,9 @@ class RAGRetriever:
                     "found_in": locations,
                 })
 
-        # Detect potential conflicts: chunks from different sources about the same entity
-        # with differing values — heuristic: look for key-value patterns
-        kv_map = defaultdict(list)  # key -> list of (value, source)
+        kv_map = defaultdict(list)
         for doc, meta in zip(retrieved_docs, metadatas):
             source_label = f"{meta.get('source', '?')} (Page {meta.get('page', '?')}, Line {meta.get('line', '?')})"
-            # Parse "Key: Value" patterns from structured chunks (Excel/CSV rows)
             for segment in doc.split("|"):
                 segment = segment.strip()
                 if ":" in segment and not segment.startswith("["):
@@ -65,12 +60,10 @@ class RAGRetriever:
         return analysis
 
     def _filter_by_access(self, docs, metadatas, distances, user: User | None):
-        """Remove chunks the current user is not allowed to see."""
         if user is None:
-            return docs, metadatas, distances  # no filtering (legacy/admin mode)
+            return docs, metadatas, distances
 
         allowed = visible_owners(user)
-        # Map allowed set: None in allowed means shared docs are ok → match "__shared__"
         allowed_owners = set()
         for a in allowed:
             allowed_owners.add("__shared__" if a is None else a)
@@ -89,7 +82,6 @@ class RAGRetriever:
 
             query_embed = self.embedder.encode(question).tolist()
 
-            # Fetch more candidates so we still have enough after access filtering
             results = self.collection.query(
                 query_embeddings=[query_embed],
                 n_results=30,
@@ -103,7 +95,6 @@ class RAGRetriever:
                     "analysis": {"duplicates": [], "conflicts": [], "unique_sources": set()},
                 }
 
-            # ── Access control: drop chunks the user must not see ──
             raw_docs = results["documents"][0]
             raw_metas = results["metadatas"][0]
             raw_dists = results["distances"][0] if results.get("distances") else [0] * len(raw_docs)
@@ -121,10 +112,8 @@ class RAGRetriever:
             distances = list(filtered[2])[:15]
             similarity_scores = [round(1 - d, 4) for d in distances]
 
-            # Run duplicate/conflict detection
             analysis = self._detect_duplicates_and_conflicts(retrieved_docs, metadatas)
 
-            # Build context with source labels
             context_parts = []
             sources = []
             for i, (doc, meta, score) in enumerate(zip(retrieved_docs, metadatas, similarity_scores)):
@@ -151,49 +140,36 @@ class RAGRetriever:
 
             context = "\n\n---\n\n".join(context_parts)
 
-            # ══════════════════════════════════════════════════════
-            # LLM-POWERED CONFLICT DETECTION (semantic, cross-source)
-            # This catches conflicts the heuristic misses, like
-            # "refund in 14 days" (PDF) vs "refund in 30 days" (email)
-            # ══════════════════════════════════════════════════════
             llm_conflicts = []
             if len(analysis["unique_sources"]) > 1:
-                # Only run if chunks come from multiple sources (otherwise no cross-source conflict possible)
                 llm_conflicts = self.conflict_detector.detect_conflicts(sources)
 
-            # Merge LLM conflicts into the existing analysis dict
-            # (existing heuristic conflicts stay — they're fast and free)
             for lc in llm_conflicts:
-                # Avoid duplicates: skip if heuristic already caught this field
                 heuristic_fields = {c["field"].lower() for c in analysis["conflicts"]}
                 if lc["field"].lower() not in heuristic_fields:
                     analysis["conflicts"].append(lc)
 
-            # Build analysis advisory for the LLM
             analysis_advisory = ""
             if analysis["duplicates"]:
                 dup_details = "; ".join(
                     f"'{d['text_preview']}' found in {', '.join(d['found_in'])}"
                     for d in analysis["duplicates"]
                 )
-                analysis_advisory += f"\n⚠️ DUPLICATE DATA DETECTED: {dup_details}\n"
+                analysis_advisory += f"\n DUPLICATE DATA DETECTED: {dup_details}\n"
             if analysis["conflicts"]:
                 conflict_details = []
                 for c in analysis["conflicts"]:
                     if "values" in c:
-                        # LLM-detected conflict (has values + resolution)
                         vals = ", ".join(f"'{v['value']}' from {v['source']}" for v in c['values'])
                         conflict_details.append(
                             f"Field '{c['field']}': {vals}. "
                             f"RESOLUTION: {c.get('resolution', 'Use the most recent source.')}"
                         )
                     else:
-                        # Heuristic-detected conflict (original format)
                         vals = ", ".join(f"'{v['value']}' from {v['source']}" for v in c.get('values', []))
                         conflict_details.append(f"Field '{c['field']}' has different values: {vals}")
-                analysis_advisory += f"\n⚠️ CONFLICTING DATA DETECTED: {'; '.join(conflict_details)}\n"
+                analysis_advisory += f"\n CONFLICTING DATA DETECTED: {'; '.join(conflict_details)}\n"
 
-            # Build user context line for the LLM
             user_context = ""
             if user:
                 user_context = (
@@ -211,14 +187,14 @@ class RAGRetriever:
 ### Answer Structure (MANDATORY for every response)
 Your response MUST contain ALL of these sections in order:
 
-1. **✅ Final Answer** — The direct answer to the question.
-2. **⚠️ Data Quality Notes** — Report ANY of the following that apply:
+1. ** Final Answer** — The direct answer to the question.
+2. ** Data Quality Notes** — Report ANY of the following that apply:
    - **Missing values**: If data needed to fully answer is not in the context, state: "Value not available in the source documents"
    - **Conflicting values**: If different sources give different values for the same field, list all values, their sources, and state which you chose and why.
    - **Duplicate entries**: If the same data appears in multiple sources, note the redundancy.
    - If none apply, write: "No data quality issues detected."
-3. **🧾 Source References** — For each piece of data used, cite: file name, page/row, section.
-4. **🧠 Reasoning** — Explain: what was found, what was missing, how conflicts were resolved.
+3. ** Source References** — For each piece of data used, cite: file name, page/row, section.
+4. ** Reasoning** — Explain: what was found, what was missing, how conflicts were resolved.
 
 ### Grounding Rules
 - Answer based ONLY on the provided context. NEVER guess or use external knowledge.
@@ -261,12 +237,6 @@ Your response MUST contain ALL of these sections in order:
 
     def add_documents(self, filename: str, chunks: list[dict],
                       owner: str | None = None, visibility: str = "shared"):
-        """
-        Store document chunks with ownership metadata.
-
-        owner:      username who owns the doc (None = org-wide shared doc)
-        visibility: "shared" (everyone) or "private" (access-controlled)
-        """
         if not chunks:
             return
 
@@ -295,7 +265,6 @@ Your response MUST contain ALL of these sections in order:
         return self.collection.count()
 
     def list_sources(self, user: User | None = None) -> list[dict]:
-        """Return list of {source, owner, visibility} dicts, filtered by access."""
         all_meta = self.collection.get(include=["metadatas"])
         seen = set()
         sources = []
@@ -304,7 +273,7 @@ Your response MUST contain ALL of these sections in order:
             allowed = visible_owners(user)
             allowed_owners = {"__shared__" if a is None else a for a in allowed}
         else:
-            allowed_owners = None  # no filter
+            allowed_owners = None
 
         for meta in all_meta["metadatas"]:
             name = meta.get("source", "Unknown")
@@ -329,7 +298,6 @@ Your response MUST contain ALL of these sections in order:
             self.collection.delete(ids=ids_to_delete)
 
     def clear_database(self):
-        """Deletes all items in the current collection."""
         all_ids = self.collection.get()["ids"]
         if all_ids:
             self.collection.delete(ids=all_ids)

@@ -1,7 +1,4 @@
-/**
- * API helper — all backend calls go through here.
- * Automatically attaches the Supabase JWT for auth.
- */
+
 
 const API_BASE = "/api";
 

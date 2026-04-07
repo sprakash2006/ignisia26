@@ -1,6 +1,4 @@
-/* ═══════════════════════════════════════
-   Authpage.css — ContextIQ Light Theme
-═══════════════════════════════════════ */
+
 
 @keyframes auth-rise { from{opacity:0;transform:translateY(24px) scale(.98)} to{opacity:1;transform:none} }
 @keyframes auth-float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-7px)} }
@@ -40,7 +38,7 @@
   position: relative; z-index: 1;
 }
 
-/* ── LEFT BRANDING ── */
+
 .auth-branding {
   background: var(--ciq-ink);
   padding: 44px 38px;
@@ -103,7 +101,7 @@
 .auth-pill:hover { border-color: rgba(0,180,120,.4); color: var(--ciq-emerald-lt); }
 .auth-pill-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ciq-emerald); flex-shrink: 0; animation: auth-pulse 2s ease-in-out infinite; }
 
-/* ── RIGHT FORM ── */
+
 .auth-form-panel {
   padding: 44px 38px;
   display: flex; flex-direction: column; background: var(--ciq-white);

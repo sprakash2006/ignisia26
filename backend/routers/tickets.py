@@ -1,6 +1,3 @@
-"""
-Ticket routes — customer ticket management, RAG resolution, and email dispatch.
-"""
 
 import os
 import smtplib
@@ -25,8 +22,6 @@ router = APIRouter(prefix="/tickets", tags=["tickets"])
 DEMO_ORG_ID = "a0000000-0000-0000-0000-000000000001"
 
 
-# ── Request / Response Models ───────────────────────────────
-
 class RaiseTicketRequest(BaseModel):
     customer_name: str
     customer_email: str
@@ -45,10 +40,7 @@ class AddNoteRequest(BaseModel):
     content: str
 
 
-# ── Helper: Optional Auth ───────────────────────────────────
-
 async def get_optional_user(request: Request) -> dict | None:
-    """Try to extract user from Authorization header; return None if absent."""
     auth_header = request.headers.get("Authorization", "")
     if not auth_header.startswith("Bearer "):
         return None
@@ -67,11 +59,8 @@ async def get_optional_user(request: Request) -> dict | None:
         return None
 
 
-# ── 1. POST /raise — Public ticket creation ─────────────────
-
 @router.post("/raise")
 async def raise_ticket(req: RaiseTicketRequest, request: Request):
-    """Create a new support ticket. Works for both logged-in and anonymous users."""
     user = await get_optional_user(request)
 
     ticket_data = {
@@ -99,8 +88,6 @@ async def raise_ticket(req: RaiseTicketRequest, request: Request):
     return {"message": "Ticket created", "ticket": result.data[0]}
 
 
-# ── 2. GET / — List tickets ─────────────────────────────────
-
 @router.get("/")
 async def list_tickets(
     status: str | None = None,
@@ -108,17 +95,14 @@ async def list_tickets(
     per_page: int = 10,
     user: dict = Depends(get_current_user),
 ):
-    """List tickets for the user's org with pagination."""
     sb = get_admin_client()
 
-    # Get total count
     count_query = sb.table("tickets").select("id", count="exact").eq("org_id", user["org_id"])
     if status:
         count_query = count_query.eq("status", status)
     count_result = count_query.execute()
     total = count_result.count if count_result.count is not None else len(count_result.data)
 
-    # Get paginated data
     offset = (page - 1) * per_page
     query = sb.table("tickets").select("*").eq("org_id", user["org_id"])
     if status:
@@ -131,16 +115,12 @@ async def list_tickets(
         "total": total,
         "page": page,
         "per_page": per_page,
-        "total_pages": max(1, -(-total // per_page)),  # ceil division
+        "total_pages": max(1, -(-total // per_page)),
     }
 
 
-# ── 3. GET /stats — Ticket statistics ───────────────────────
-# NOTE: Defined before /{ticket_id} to avoid route shadowing.
-
 @router.get("/stats")
 async def ticket_stats(user: dict = Depends(get_current_user)):
-    """Return ticket count breakdown by status for the user's org."""
     sb = get_admin_client()
     result = sb.table("tickets").select("status").eq("org_id", user["org_id"]).execute()
 
@@ -154,11 +134,8 @@ async def ticket_stats(user: dict = Depends(get_current_user)):
     return counts
 
 
-# ── 4. GET /{ticket_id} — Single ticket ─────────────────────
-
 @router.get("/{ticket_id}")
 async def get_ticket(ticket_id: str, user: dict = Depends(get_current_user)):
-    """Get a single ticket by ID (must belong to user's org)."""
     sb = get_admin_client()
     result = (
         sb.table("tickets")
@@ -175,14 +152,10 @@ async def get_ticket(ticket_id: str, user: dict = Depends(get_current_user)):
     return result.data
 
 
-# ── 5. PATCH /{ticket_id}/assign — Assign to self ───────────
-
 @router.patch("/{ticket_id}/assign")
 async def assign_ticket(ticket_id: str, user: dict = Depends(get_current_user)):
-    """Assign the ticket to the current user and set status to in_progress."""
     sb = get_admin_client()
 
-    # Verify ticket belongs to org
     ticket = (
         sb.table("tickets")
         .select("id")
@@ -208,21 +181,10 @@ async def assign_ticket(ticket_id: str, user: dict = Depends(get_current_user)):
     return {"message": "Ticket assigned", "ticket": result.data[0]}
 
 
-# ── 6. POST /{ticket_id}/resolve — RAG resolution ───────────
-
 @router.post("/{ticket_id}/resolve")
 async def resolve_ticket(ticket_id: str, user: dict = Depends(get_current_user)):
-    """
-    Resolve a ticket using the FULL RAG pipeline:
-    1. Search relevant chunks with access control.
-    2. Run heuristic duplicate & conflict detection.
-    3. Run LLM-powered cross-source conflict detection.
-    4. Generate AI answer with conflict awareness baked in.
-    5. Format into professional email via email agent.
-    """
     sb = get_admin_client()
 
-    # Fetch ticket
     ticket = (
         sb.table("tickets")
         .select("*")
@@ -238,24 +200,21 @@ async def resolve_ticket(ticket_id: str, user: dict = Depends(get_current_user))
     customer_query = ticket_data["query"]
     customer_name = ticket_data["customer_name"]
 
-    # ── Step 1: Full RAG query (with conflict detection) ──
     rag = get_rag_service()
     rag_result = await rag.query(
         question=customer_query,
         org_id=user["org_id"],
         user_id=user["id"],
-        conversation_id=None,  # no conversation — standalone ticket
-        history=[],            # no past conversation history
+        conversation_id=None,
+        history=[],
     )
 
     ai_response = rag_result["content"]
     sources = rag_result.get("sources", [])
     analysis = rag_result.get("analysis", {})
 
-    # ── Step 2: Format into professional email (gpt-4o-mini) ──
     gpt = OpenAI(api_key=settings.OPENAI_API_KEY)
 
-    # Build conflict summary for email agent awareness
     conflict_note = ""
     if analysis.get("conflicts"):
         conflict_items = []
@@ -302,7 +261,6 @@ Requirements:
     )
     email_body = email_response.choices[0].message.content.strip()
 
-    # ── Step 3: Update ticket ──
     now = datetime.now(timezone.utc).isoformat()
     sb.table("tickets").update({
         "ai_response": ai_response,
@@ -322,15 +280,12 @@ Requirements:
     }
 
 
-# ── 7. PATCH /{ticket_id}/email-body — Edit email draft ─────
-
 @router.patch("/{ticket_id}/email-body")
 async def update_email_body(
     ticket_id: str,
     req: UpdateEmailBodyRequest,
     user: dict = Depends(get_current_user),
 ):
-    """Update the email body before sending (employee review / edit)."""
     sb = get_admin_client()
 
     ticket = (
@@ -357,11 +312,8 @@ async def update_email_body(
     return {"message": "Email body updated", "ticket": result.data[0]}
 
 
-# ── 8. POST /{ticket_id}/send-email — Send via SMTP ─────────
-
 @router.post("/{ticket_id}/send-email")
 async def send_ticket_email(ticket_id: str, user: dict = Depends(get_current_user)):
-    """Send the resolved email to the customer via Gmail SMTP."""
     sb = get_admin_client()
 
     ticket = (
@@ -383,7 +335,6 @@ async def send_ticket_email(ticket_id: str, user: dict = Depends(get_current_use
     if ticket_data.get("email_sent"):
         raise HTTPException(status_code=400, detail="Email has already been sent for this ticket.")
 
-    # Build the email
     sender_email = os.environ.get("EMAIL_ADDRESS")
     sender_password = os.environ.get("EMAIL_PASSWORD")
 
@@ -407,7 +358,6 @@ async def send_ticket_email(ticket_id: str, user: dict = Depends(get_current_use
         logger.error(f"Failed to send email for ticket {ticket_id}: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to send email: {str(e)}")
 
-    # Update ticket
     now = datetime.now(timezone.utc).isoformat()
     result = (
         sb.table("tickets")
@@ -424,18 +374,14 @@ async def send_ticket_email(ticket_id: str, user: dict = Depends(get_current_use
     return {"message": "Email sent successfully", "ticket": result.data[0]}
 
 
-# ── 9. POST /{ticket_id}/notes — Add internal note ──────────
-
 @router.post("/{ticket_id}/notes")
 async def add_note(
     ticket_id: str,
     req: AddNoteRequest,
     user: dict = Depends(get_current_user),
 ):
-    """Add an internal note to a ticket."""
     sb = get_admin_client()
 
-    # Verify ticket belongs to org
     ticket = (
         sb.table("tickets")
         .select("id")
@@ -456,14 +402,10 @@ async def add_note(
     return {"message": "Note added", "note": result.data[0]}
 
 
-# ── 10. GET /{ticket_id}/notes — List notes ─────────────────
-
 @router.get("/{ticket_id}/notes")
 async def list_notes(ticket_id: str, user: dict = Depends(get_current_user)):
-    """List all internal notes for a ticket."""
     sb = get_admin_client()
 
-    # Verify ticket belongs to org
     ticket = (
         sb.table("tickets")
         .select("id")

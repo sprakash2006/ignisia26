@@ -10,44 +10,9 @@ class ConflictDetector:
         self.gpt = openai_client
 
     def detect_conflicts(self, sources: list[dict]) -> list[dict]:
-        """
-        Takes the retrieved source chunks and checks for semantic
-        contradictions between chunks from DIFFERENT documents.
-
-        Args:
-            sources: list of dicts (same format as your existing sources list):
-                {
-                    "document": "Pricing_2025.xlsx",
-                    "page": 1,
-                    "line": 42,
-                    "section": "Sheet1",
-                    "date_added": "2025-04-03",
-                    "chunk": "...",
-                    "similarity": 0.87,
-                }
-
-        Returns:
-            list of conflict dicts for the frontend/prompt:
-                {
-                    "field": "unit pricing",
-                    "summary": "Email quotes ₹500/unit but spreadsheet shows ₹650/unit",
-                    "trusted_source": "Pricing_2025.xlsx",
-                    "trusted_detail": "Page 1, Row 42",
-                    "trusted_date": "2025-03-01",
-                    "untrusted_source": "acme_email_jan.txt",
-                    "untrusted_detail": "Page 1, Line 3",
-                    "untrusted_date": "2025-01-15",
-                    "resolution": "Trusting 'Pricing_2025.xlsx' (dated 2025-03-01)..."
-                    "values": [
-                        {"value": "₹650/unit", "source": "Pricing_2025.xlsx (Row 42)"},
-                        {"value": "₹500/unit", "source": "acme_email_jan.txt (Line 3)"},
-                    ]
-                }
-        """
         if len(sources) < 2:
             return []
 
-        # Only compare chunks from DIFFERENT documents
         cross_source_pairs = []
         for i in range(len(sources)):
             for j in range(i + 1, len(sources)):
@@ -63,7 +28,6 @@ class ConflictDetector:
         return self._llm_conflict_check(cross_source_pairs)
 
     def _llm_conflict_check(self, pairs: list[tuple]) -> list[dict]:
-        """Send cross-source pairs to GPT, ask for contradictions."""
 
         pairs_text = ""
         for idx, (a, b) in enumerate(pairs):
@@ -135,7 +99,6 @@ If NO conflicts exist, return: {{"conflicts": []}}"""
 
                 chunk_a, chunk_b = pairs[pair_idx]
 
-                # Resolve: pick the newer or more authoritative source
                 trusted, untrusted, resolution = self._resolve_conflict(
                     chunk_a, chunk_b, c.get("summary", "")
                 )
@@ -172,15 +135,9 @@ If NO conflicts exist, return: {{"conflicts": []}}"""
             return []
 
     def _resolve_conflict(self, chunk_a: dict, chunk_b: dict, summary: str) -> tuple:
-        """
-        Decide which source to trust.
-        Priority: date (newer wins) → file type (spreadsheet > PDF > text/email)
-        Returns: (trusted, untrusted, reason_string)
-        """
         date_a = self._parse_date(chunk_a.get("date_added"))
         date_b = self._parse_date(chunk_b.get("date_added"))
 
-        # 1. Try date-based resolution
         if date_a and date_b and date_a != date_b:
             if date_a > date_b:
                 return (chunk_a, chunk_b,
@@ -191,8 +148,6 @@ If NO conflicts exist, return: {{"conflicts": []}}"""
                     f"Trusting '{chunk_b['document']}' (dated {chunk_b.get('date_added')}) — "
                     f"it is more recent than '{chunk_a['document']}' (dated {chunk_a.get('date_added')}).")
 
-        # 2. Same date or no dates → file type heuristic
-        # Spreadsheets are usually the source of truth for pricing/data
         priority = {".xlsx": 4, ".xls": 4, ".csv": 3, ".pdf": 2, ".docx": 2, ".txt": 1, ".eml": 1}
         ext_a = "." + chunk_a["document"].rsplit(".", 1)[-1].lower() if "." in chunk_a["document"] else ""
         ext_b = "." + chunk_b["document"].rsplit(".", 1)[-1].lower() if "." in chunk_b["document"] else ""
@@ -208,7 +163,6 @@ If NO conflicts exist, return: {{"conflicts": []}}"""
                 f"Both sources have the same date. Trusting '{chunk_b['document']}' — "
                 f"structured data sources (spreadsheets) are typically the canonical reference.")
         else:
-            # Same priority — trust A by default, flag for human review
             return (chunk_a, chunk_b,
                 f"Could not determine which source is more authoritative. "
                 f"Defaulting to '{chunk_a['document']}' — recommend manual verification.")

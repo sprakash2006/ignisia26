@@ -25,7 +25,7 @@ export default function EmailPage() {
         setConfig(data);
         setForm(f => ({ ...f, imap_server: data.imap_server, email_address: data.email_address, folder: data.folder }));
       }
-    } catch { /* empty */ } finally {
+    } catch {  } finally {
       setPageLoading(false);
     }
   }
@@ -91,7 +91,7 @@ export default function EmailPage() {
             <p className="em-sub">Connect your IMAP mailbox to automatically ingest emails into the knowledge base.</p>
           </div>
 
-          {/* Config form */}
+          {}
           <div className="em-card animate-fade-up delay-1">
             <h2 className="em-card-title">IMAP Configuration</h2>
 
@@ -128,12 +128,12 @@ export default function EmailPage() {
 
             {testResult && (
               <div className={`em-result ${testResult.success ? "success" : "error"}`}>
-                {testResult.success ? "✅" : "❌"} {testResult.message}
+                {testResult.success ? "" : ""} {testResult.message}
               </div>
             )}
           </div>
 
-          {/* Poll section */}
+          {}
           {config && (
             <div className="em-card animate-fade-up delay-2">
               <h2 className="em-card-title">Fetch Emails</h2>
@@ -143,7 +143,7 @@ export default function EmailPage() {
               </p>
 
               <button className="em-btn-primary" onClick={handlePoll} disabled={polling}>
-                {polling ? "Checking mailbox…" : "📥 Fetch New Emails"}
+                {polling ? "Checking mailbox…" : " Fetch New Emails"}
               </button>
 
               {pollResult && (
@@ -151,7 +151,7 @@ export default function EmailPage() {
                   {pollResult.message}
                   {pollResult.emails?.map((em, i) => (
                     <div key={i} className="em-email-item">
-                      📧 <strong>{em.subject}</strong> from {em.from} — {em.chunk_count} chunks
+                       <strong>{em.subject}</strong> from {em.from} — {em.chunk_count} chunks
                     </div>
                   ))}
                 </div>
@@ -159,9 +159,9 @@ export default function EmailPage() {
             </div>
           )}
 
-          {/* Help */}
+          {}
           <div className="em-tips animate-fade-up delay-3">
-            <div className="em-tip-icon">📧</div>
+            <div className="em-tip-icon"></div>
             <div>
               <strong>Email setup guide</strong>
               <p>Emails are ingested as <strong>private documents</strong> under your account. They follow role-based access — only you and your managers can see them.</p>

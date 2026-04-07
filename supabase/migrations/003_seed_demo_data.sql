@@ -1,19 +1,5 @@
--- ============================================================
--- SEED DEMO DATA
--- ============================================================
--- PREREQUISITE: Register these 4 users via the frontend first:
---   1. Arjun  | arjun@ignisia.com  | password123 | Director
---   2. Meera  | meera@ignisia.com  | password123 | Manager
---   3. Priya  | priya@ignisia.com  | password123 | Employee
---   4. Rahul  | rahul@ignisia.com  | password123 | Employee
---
--- Then run this entire script in Supabase SQL Editor.
--- ============================================================
 
 
--- ============================================================
--- 1. FIX HIERARCHY (reports_to)
--- ============================================================
 UPDATE profiles
 SET reports_to = (SELECT id FROM profiles WHERE email = 'arjun@ignisia.com')
 WHERE email = 'meera@ignisia.com';
@@ -27,12 +13,9 @@ SET reports_to = (SELECT id FROM profiles WHERE email = 'meera@ignisia.com')
 WHERE email = 'rahul@ignisia.com';
 
 
--- ============================================================
--- 2. DOCUMENTS (no chunks — just metadata for the UI)
--- ============================================================
 INSERT INTO documents (id, org_id, owner_id, filename, file_type, file_size_bytes, visibility, source_type, chunk_count, status)
 VALUES
-  -- Shared docs (visible to everyone)
+  
   (
     'ddd00000-0000-0000-0000-000000000001',
     'a0000000-0000-0000-0000-000000000001',
@@ -81,7 +64,7 @@ VALUES
     25,
     'ready'
   ),
-  -- Private doc owned by Priya (only Priya, Meera, Arjun can see)
+  
   (
     'ddd00000-0000-0000-0000-000000000005',
     'a0000000-0000-0000-0000-000000000001',
@@ -94,7 +77,7 @@ VALUES
     8,
     'ready'
   ),
-  -- Private doc owned by Rahul (only Rahul, Meera, Arjun can see)
+  
   (
     'ddd00000-0000-0000-0000-000000000006',
     'a0000000-0000-0000-0000-000000000001',
@@ -107,7 +90,7 @@ VALUES
     5,
     'ready'
   ),
-  -- Private doc owned by Meera (only Meera, Arjun can see)
+  
   (
     'ddd00000-0000-0000-0000-000000000007',
     'a0000000-0000-0000-0000-000000000001',
@@ -120,7 +103,7 @@ VALUES
     12,
     'ready'
   ),
-  -- An email-sourced doc (private to Arjun)
+  
   (
     'ddd00000-0000-0000-0000-000000000008',
     'a0000000-0000-0000-0000-000000000001',
@@ -133,7 +116,7 @@ VALUES
     6,
     'ready'
   ),
-  -- A processing doc (to show the status in UI)
+  
   (
     'ddd00000-0000-0000-0000-000000000009',
     'a0000000-0000-0000-0000-000000000001',
@@ -146,7 +129,7 @@ VALUES
     0,
     'processing'
   ),
-  -- A failed doc (to show error state in UI)
+  
   (
     'ddd00000-0000-0000-0000-000000000010',
     'a0000000-0000-0000-0000-000000000001',
@@ -161,9 +144,6 @@ VALUES
   );
 
 
--- ============================================================
--- 3. CONVERSATIONS
--- ============================================================
 INSERT INTO conversations (id, org_id, user_id, title, created_at)
 VALUES
   (
@@ -196,12 +176,9 @@ VALUES
   );
 
 
--- ============================================================
--- 4. MESSAGES (sample chat history)
--- ============================================================
 INSERT INTO messages (conversation_id, role, content, sources, analysis, created_at)
 VALUES
-  -- Conversation 1: Arjun asks about revenue
+  
   (
     'ccc00000-0000-0000-0000-000000000001',
     'user',
@@ -213,7 +190,7 @@ VALUES
   (
     'ccc00000-0000-0000-0000-000000000001',
     'assistant',
-    E'**✅ Final Answer**\nThe total revenue for Q1 2025 was ₹4.82 Crores, a 23% increase over Q1 2024.\n\n**⚠️ Data Quality Notes**\nNo data quality issues detected.\n\n**🧾 Source References**\n- Q1_2025_Revenue_Report.xlsx, Page 1, Row 12\n\n**🧠 Reasoning**\nThe revenue figure was found directly in the quarterly report summary sheet.',
+    E'** Final Answer**\nThe total revenue for Q1 2025 was ₹4.82 Crores, a 23% increase over Q1 2024.\n\n** Data Quality Notes**\nNo data quality issues detected.\n\n** Source References**\n- Q1_2025_Revenue_Report.xlsx, Page 1, Row 12\n\n** Reasoning**\nThe revenue figure was found directly in the quarterly report summary sheet.',
     '[{"document": "Q1_2025_Revenue_Report.xlsx", "page": 1, "line": 12, "similarity": 0.9234}]'::jsonb,
     '{"duplicates": [], "conflicts": [], "unique_sources": ["Q1_2025_Revenue_Report.xlsx"]}'::jsonb,
     now() - interval '1 hour 59 minutes'
@@ -229,13 +206,13 @@ VALUES
   (
     'ccc00000-0000-0000-0000-000000000001',
     'assistant',
-    E'**✅ Final Answer**\nThe Q1 2025 target was ₹4.5 Crores. Actual revenue of ₹4.82 Crores exceeded the target by 7.1%.\n\n**⚠️ Data Quality Notes**\nNo data quality issues detected.\n\n**🧾 Source References**\n- Q1_2025_Revenue_Report.xlsx, Page 1, Row 12 (actual)\n- Product_Roadmap_H1_2025.pdf, Page 3, Section: Revenue Targets (target)\n\n**🧠 Reasoning**\nActual revenue from the Q1 report was compared against the target defined in the H1 roadmap.',
+    E'** Final Answer**\nThe Q1 2025 target was ₹4.5 Crores. Actual revenue of ₹4.82 Crores exceeded the target by 7.1%.\n\n** Data Quality Notes**\nNo data quality issues detected.\n\n** Source References**\n- Q1_2025_Revenue_Report.xlsx, Page 1, Row 12 (actual)\n- Product_Roadmap_H1_2025.pdf, Page 3, Section: Revenue Targets (target)\n\n** Reasoning**\nActual revenue from the Q1 report was compared against the target defined in the H1 roadmap.',
     '[{"document": "Q1_2025_Revenue_Report.xlsx", "page": 1, "line": 12, "similarity": 0.9234}, {"document": "Product_Roadmap_H1_2025.pdf", "page": 3, "line": 1, "similarity": 0.8712}]'::jsonb,
     '{"duplicates": [], "conflicts": [], "unique_sources": ["Q1_2025_Revenue_Report.xlsx", "Product_Roadmap_H1_2025.pdf"]}'::jsonb,
     now() - interval '1 hour 54 minutes'
   ),
 
-  -- Conversation 2: Arjun asks about policies
+  
   (
     'ccc00000-0000-0000-0000-000000000002',
     'user',
@@ -247,13 +224,13 @@ VALUES
   (
     'ccc00000-0000-0000-0000-000000000002',
     'assistant',
-    E'**✅ Final Answer**\nEmployees may work remotely up to 3 days per week with manager approval. Full-time remote requires director-level approval and a signed remote work agreement.\n\n**⚠️ Data Quality Notes**\nNo data quality issues detected.\n\n**🧾 Source References**\n- Company_Policy_Handbook_2025.pdf, Page 14, Section: Remote Work\n\n**🧠 Reasoning**\nThe policy was found in the handbook under the Remote Work section.',
+    E'** Final Answer**\nEmployees may work remotely up to 3 days per week with manager approval. Full-time remote requires director-level approval and a signed remote work agreement.\n\n** Data Quality Notes**\nNo data quality issues detected.\n\n** Source References**\n- Company_Policy_Handbook_2025.pdf, Page 14, Section: Remote Work\n\n** Reasoning**\nThe policy was found in the handbook under the Remote Work section.',
     '[{"document": "Company_Policy_Handbook_2025.pdf", "page": 14, "line": 1, "similarity": 0.9456}]'::jsonb,
     '{"duplicates": [], "conflicts": [], "unique_sources": ["Company_Policy_Handbook_2025.pdf"]}'::jsonb,
     now() - interval '23 hours 59 minutes'
   ),
 
-  -- Conversation 3: Meera reviews budget
+  
   (
     'ccc00000-0000-0000-0000-000000000003',
     'user',
@@ -265,13 +242,13 @@ VALUES
   (
     'ccc00000-0000-0000-0000-000000000003',
     'assistant',
-    E'**✅ Final Answer**\nThe engineering team budget for Q2 2025 is ₹1.2 Crores, allocated across hiring (40%), infrastructure (35%), and training (25%).\n\n**⚠️ Data Quality Notes**\n⚠️ CONFLICTING DATA: The roadmap mentions ₹1.35 Crores for engineering in Q2, while the budget sheet shows ₹1.2 Crores. The budget sheet is more recent (March 2025 vs January 2025), so ₹1.2 Crores is used.\n\n**🧾 Source References**\n- Team_Budget_Allocation_2025.xlsx, Page 1, Row 8\n- Product_Roadmap_H1_2025.pdf, Page 5, Section: Resource Planning\n\n**🧠 Reasoning**\nTwo sources were found with different figures. The budget allocation sheet is the more authoritative and recent source.',
+    E'** Final Answer**\nThe engineering team budget for Q2 2025 is ₹1.2 Crores, allocated across hiring (40%), infrastructure (35%), and training (25%).\n\n** Data Quality Notes**\n CONFLICTING DATA: The roadmap mentions ₹1.35 Crores for engineering in Q2, while the budget sheet shows ₹1.2 Crores. The budget sheet is more recent (March 2025 vs January 2025), so ₹1.2 Crores is used.\n\n** Source References**\n- Team_Budget_Allocation_2025.xlsx, Page 1, Row 8\n- Product_Roadmap_H1_2025.pdf, Page 5, Section: Resource Planning\n\n** Reasoning**\nTwo sources were found with different figures. The budget allocation sheet is the more authoritative and recent source.',
     '[{"document": "Team_Budget_Allocation_2025.xlsx", "page": 1, "line": 8, "similarity": 0.9102}, {"document": "Product_Roadmap_H1_2025.pdf", "page": 5, "line": 1, "similarity": 0.8543}]'::jsonb,
     '{"duplicates": [], "conflicts": [{"field": "engineering_budget_q2", "values": [{"value": "1.2 Crores", "source": "Team_Budget_Allocation_2025.xlsx"}, {"value": "1.35 Crores", "source": "Product_Roadmap_H1_2025.pdf"}]}], "unique_sources": ["Team_Budget_Allocation_2025.xlsx", "Product_Roadmap_H1_2025.pdf"]}'::jsonb,
     now() - interval '2 hours 59 minutes'
   ),
 
-  -- Conversation 4: Priya asks about benefits
+  
   (
     'ccc00000-0000-0000-0000-000000000004',
     'user',
@@ -283,16 +260,13 @@ VALUES
   (
     'ccc00000-0000-0000-0000-000000000004',
     'assistant',
-    E'**✅ Final Answer**\nAll full-time employees get 24 paid leaves per year: 12 casual leaves, 6 sick leaves, and 6 earned leaves. Unused earned leaves can be carried forward (max 18).\n\n**⚠️ Data Quality Notes**\nNo data quality issues detected.\n\n**🧾 Source References**\n- Employee_Benefits_Summary.docx, Page 2, Section: Leave Policy\n- Company_Policy_Handbook_2025.pdf, Page 22, Section: Leave Entitlement\n\n**🧠 Reasoning**\nBoth sources confirm the same leave structure. No conflicts detected.',
+    E'** Final Answer**\nAll full-time employees get 24 paid leaves per year: 12 casual leaves, 6 sick leaves, and 6 earned leaves. Unused earned leaves can be carried forward (max 18).\n\n** Data Quality Notes**\nNo data quality issues detected.\n\n** Source References**\n- Employee_Benefits_Summary.docx, Page 2, Section: Leave Policy\n- Company_Policy_Handbook_2025.pdf, Page 22, Section: Leave Entitlement\n\n** Reasoning**\nBoth sources confirm the same leave structure. No conflicts detected.',
     '[{"document": "Employee_Benefits_Summary.docx", "page": 2, "line": 1, "similarity": 0.9321}, {"document": "Company_Policy_Handbook_2025.pdf", "page": 22, "line": 1, "similarity": 0.8876}]'::jsonb,
     '{"duplicates": [{"text_preview": "24 paid leaves per year: 12 casual, 6 sick, 6 earned", "found_in": ["Employee_Benefits_Summary.docx", "Company_Policy_Handbook_2025.pdf"]}], "conflicts": [], "unique_sources": ["Employee_Benefits_Summary.docx", "Company_Policy_Handbook_2025.pdf"]}'::jsonb,
     now() - interval '4 hours 59 minutes'
   );
 
 
--- ============================================================
--- 5. EMAIL CONFIGS
--- ============================================================
 INSERT INTO email_configs (user_id, org_id, imap_server, email_address, encrypted_password, folder, is_active, last_polled_at)
 VALUES
   (
@@ -307,9 +281,6 @@ VALUES
   );
 
 
--- ============================================================
--- 6. AUDIT LOG
--- ============================================================
 INSERT INTO audit_log (org_id, user_id, action, details, created_at)
 VALUES
   (

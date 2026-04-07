@@ -23,19 +23,19 @@ export default function ResolveTicketPage() {
   const [ticket, setTicket] = useState(null);
   const [error, setError] = useState(null);
 
-  // AI resolve
+  
   const [resolving, setResolving] = useState(false);
   const [aiResponse, setAiResponse] = useState(null);
   const [emailBody, setEmailBody] = useState("");
 
-  // Actions
+  
   const [assigning, setAssigning] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
   const [sendConfirm, setSendConfirm] = useState(false);
   const [actionMsg, setActionMsg] = useState(null);
 
-  // Notes
+  
   const [notes, setNotes] = useState([]);
   const [noteText, setNoteText] = useState("");
   const [addingNote, setAddingNote] = useState(false);
@@ -62,7 +62,7 @@ export default function ResolveTicketPage() {
     try {
       const data = await api.get(`/tickets/${id}/notes`);
       setNotes(data.notes || data || []);
-    } catch { /* empty */ }
+    } catch {  }
   }
 
   async function handleAssign() {
@@ -151,10 +151,10 @@ export default function ResolveTicketPage() {
           </div>
         ) : ticket && (
           <div className="rv-inner animate-fade-up">
-            {/* Back link */}
+            {}
             <button className="rv-back" onClick={() => navigate("/tickets")}>← Back to Tickets</button>
 
-            {/* Ticket info card */}
+            {}
             <div className="rv-info-card">
               <div className="rv-info-header">
                 <h1 className="rv-ticket-subject">{ticket.subject}</h1>
@@ -196,21 +196,21 @@ export default function ResolveTicketPage() {
               </div>
             </div>
 
-            {/* Customer query */}
+            {}
             <div className="rv-query-card">
               <div className="rv-query-label">Customer Query</div>
               <div className="rv-query-body">{ticket.query || ticket.description}</div>
             </div>
 
-            {/* Action messages */}
+            {}
             {actionMsg && (
               <div className={`rv-action-msg rv-action-${actionMsg.type}`}>{actionMsg.text}</div>
             )}
 
-            {/* Closed banner */}
+            {}
             {ticket.email_sent && (
               <div className="rv-closed-banner">
-                <span className="rv-closed-icon">✅</span>
+                <span className="rv-closed-icon"></span>
                 <div>
                   <strong>Ticket Resolved & Email Sent</strong>
                   <p>Email was sent to <strong>{ticket.customer_email}</strong> on {formatDate(ticket.email_sent_at)}</p>
@@ -218,7 +218,7 @@ export default function ResolveTicketPage() {
               </div>
             )}
 
-            {/* Action buttons — hide when closed */}
+            {}
             {!ticket.email_sent && (
               <div className="rv-actions">
                 {!ticket.assigned_to && (
@@ -232,7 +232,7 @@ export default function ResolveTicketPage() {
               </div>
             )}
 
-            {/* AI response */}
+            {}
             {resolving && (
               <div className="rv-ai-loading">
                 <Loader text="AI is analyzing documents and generating response..." />
@@ -246,7 +246,7 @@ export default function ResolveTicketPage() {
               </div>
             )}
 
-            {/* Email draft / sent email */}
+            {}
             {emailBody && !resolving && (
               <div className={`rv-email-card ${ticket.email_sent ? "rv-email-sent" : ""}`}>
                 <div className="rv-email-label">
@@ -285,7 +285,7 @@ export default function ResolveTicketPage() {
               </div>
             )}
 
-            {/* Internal notes */}
+            {}
             <div className="rv-notes-card">
               <div className="rv-notes-label">Internal Notes</div>
               <div className="rv-notes-list">

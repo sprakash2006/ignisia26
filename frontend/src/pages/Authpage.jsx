@@ -14,7 +14,7 @@ function LogoMark() {
   );
 }
 
-// Default demo org ID (created in seed migration)
+
 const DEMO_ORG_ID = "a0000000-0000-0000-0000-000000000001";
 
 export default function AuthPage() {
@@ -72,14 +72,14 @@ const [form, setForm] = useState({ name: "", email: "", password: "", confirm: "
     <div className="auth-page">
       <div className="auth-wrapper">
 
-        {/* LEFT */}
+        {}
         <div className="auth-branding">
           <div className="auth-brand-logo">
             <LogoMark />
-            ContextIQ
+            PaperTrail
           </div>
           <div className="auth-brand-center">
-            <div className="auth-agent-visual">🤖</div>
+            <div className="auth-agent-visual"></div>
             <h2>AI knowledge,<br /><em>for your whole team.</em></h2>
             <p>Ask questions. Get cited answers.<br />From your company's own PDFs, spreadsheets, and emails.</p>
           </div>
@@ -146,7 +146,7 @@ const [form, setForm] = useState({ name: "", email: "", password: "", confirm: "
               </div>
             )}
 
-            {error && <div className="auth-error">⚠ {error}</div>}
+            {error && <div className="auth-error"> {error}</div>}
 
             <button className={`auth-submit ${loading ? "loading" : ""}`} onClick={handleSubmit} disabled={loading}>
               {loading ? "Setting up…" : mode === "login" ? "Sign in →" : "Create account →"}

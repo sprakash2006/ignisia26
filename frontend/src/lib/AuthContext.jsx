@@ -10,14 +10,14 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get initial session
+    
     supabase.auth.getSession().then(({ data: { session: s } }) => {
       setSession(s);
       if (s) fetchProfile(s);
       else setLoading(false);
     });
 
-    // Listen for auth changes
+    
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, s) => {
         setSession(s);
@@ -38,7 +38,7 @@ export function AuthProvider({ children }) {
       setUser(profile);
     } catch (err) {
       console.error("fetchProfile failed:", err);
-      // Still set user from session so they can access the app
+      
       setUser({
         id: s.user.id,
         email: s.user.email,

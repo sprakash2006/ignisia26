@@ -6,9 +6,9 @@ import Loader from "../components/Loader";
 import "./Dashboardpage.css";
 
 const QUICK_ACTIONS = [
-  { icon: "🔍", title: "Ask a question",  desc: "Query your company knowledge base instantly" },
-  { icon: "📄", title: "Browse documents", desc: "Explore uploaded resources by topic" },
-  { icon: "⚡", title: "Recent answers",   desc: "Review your last cited responses" },
+  { icon: "", title: "Ask a question",  desc: "Query your company knowledge base instantly" },
+  { icon: "", title: "Browse documents", desc: "Explore uploaded resources by topic" },
+  { icon: "", title: "Recent answers",   desc: "Review your last cited responses" },
 ];
 
 export default function DashboardPage() {
@@ -38,7 +38,7 @@ export default function DashboardPage() {
     try {
       const data = await api.get("/chat/conversations");
       setConversations(data);
-    } catch { /* empty */ } finally {
+    } catch {  } finally {
       setPageLoading(false);
     }
   }
@@ -63,7 +63,7 @@ export default function DashboardPage() {
         analysis: m.analysis || {},
       })));
       setActiveConvId(convId);
-    } catch { /* empty */ } finally {
+    } catch {  } finally {
       setMsgsLoading(false);
     }
   }
@@ -74,7 +74,7 @@ export default function DashboardPage() {
     setQuery("");
     setLoading(true);
 
-    // Add user message to UI immediately
+    
     setMessages(prev => [...prev, { role: "user", content: q }]);
 
     try {
@@ -97,7 +97,7 @@ export default function DashboardPage() {
     } catch (e) {
       setMessages(prev => [...prev, {
         role: "assistant",
-        content: `⚠ Error: ${e.message}. Make sure the backend is running on port 8000.`,
+        content: ` Error: ${e.message}. Make sure the backend is running on port 8000.`,
         sources: [],
         analysis: {},
       }]);
@@ -133,7 +133,7 @@ export default function DashboardPage() {
     <div className="dash-page">
       <Sidebar />
 
-      {/* CENTER */}
+      {}
       <main className="dash-center">
         <div className="dash-center-inner">
           {msgsLoading && (
@@ -141,7 +141,7 @@ export default function DashboardPage() {
           )}
           {!msgsLoading && !hasAnswer && (
             <div className="center-welcome">
-              <div className="center-agent-icon">🤖</div>
+              <div className="center-agent-icon"></div>
               <h1 className="center-title">Hi {firstName}, what do<br />you need to know?</h1>
               <p className="center-sub">Ask anything — the agent searches all your company documents.</p>
               <div className="center-docs-badge">
@@ -164,7 +164,7 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* Chat messages */}
+          {}
           {!msgsLoading && hasAnswer && (
             <div className="chat-messages">
               {messages.map((msg, i) => (
@@ -186,7 +186,7 @@ export default function DashboardPage() {
                           <div className="sources-chips">
                             {msg.sources.map((s, j) => {
                               const ext = s.document?.split(".").pop() || "";
-                              const icon = { pdf: "📄", xlsx: "📊", csv: "📊", docx: "📝", eml: "📧", txt: "📃" }[ext] || "📎";
+                              const icon = { pdf: "", xlsx: "", csv: "", docx: "", eml: "", txt: "" }[ext] || "";
                               return (
                                 <span key={j} className="source-chip">
                                   {icon} {s.document} · p.{s.page} · {s.similarity ? `${(s.similarity * 100).toFixed(0)}%` : ""}
@@ -201,7 +201,7 @@ export default function DashboardPage() {
                       <div className="msg-conflicts">
                         {msg.analysis.conflicts.map((c, j) => (
                           <div key={j} className="conflict-alert">
-                            <strong>⚠ Conflict: {c.field}</strong>
+                            <strong> Conflict: {c.field}</strong>
                             {c.resolution && <p>{c.resolution}</p>}
                           </div>
                         ))}
@@ -223,10 +223,10 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* QUERY BAR */}
+        {}
         <div className="query-bar-wrapper">
           <div className="query-bar">
-            <div className="query-agent-icon">🤖</div>
+            <div className="query-agent-icon"></div>
             <input
               id="query-input"
               className="query-input"
@@ -247,13 +247,13 @@ export default function DashboardPage() {
         </div>
       </main>
 
-      {/* RIGHT — HISTORY */}
+      {}
       <aside className="dash-history">
         <div className="history-header">
           <h3>Chat history</h3>
         </div>
         <div className="history-search">
-          <span className="hsearch-icon">🔍</span>
+          <span className="hsearch-icon"></span>
           <input type="text" placeholder="Search chats…" value={search} onChange={e => setSearch(e.target.value)} />
         </div>
         <div className="history-list">

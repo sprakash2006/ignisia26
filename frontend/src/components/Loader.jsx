@@ -5,7 +5,7 @@ export default function Loader({ text = "Loading...", fullPage = false }) {
     <div className="loader-container">
       <div className="loader-spinner">
         <div className="loader-ring" />
-        <div className="loader-icon">🤖</div>
+        <div className="loader-icon"></div>
       </div>
       <div className="loader-text">{text}</div>
       <div className="loader-dots">

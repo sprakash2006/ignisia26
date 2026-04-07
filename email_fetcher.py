@@ -1,16 +1,3 @@
-"""
-email_fetcher.py — Real IMAP email fetcher for the RAG pipeline.
-
-Connects to any IMAP server (Gmail, Outlook, custom), fetches
-UNSEEN emails, parses them via the ingestor's _process_email logic,
-and tracks seen Message-IDs to avoid re-ingesting.
-
-Environment variables (set in .env):
-    EMAIL_IMAP_SERVER   — e.g. imap.gmail.com
-    EMAIL_ADDRESS       — e.g. yourname@gmail.com
-    EMAIL_PASSWORD      — app password (NOT your main password)
-    EMAIL_FOLDER        — mailbox folder to poll (default: INBOX)
-"""
 
 import os
 import imaplib
@@ -31,32 +18,18 @@ class EmailFetcher:
         self.email_pass = os.getenv("EMAIL_PASSWORD", "")
         self.folder = os.getenv("EMAIL_FOLDER", "INBOX")
         self.ingestor = FileIngestor()
-        self._seen_ids: set[str] = set()  # Message-IDs already processed
+        self._seen_ids: set[str] = set()
 
     def is_configured(self) -> bool:
-        """Check if IMAP credentials are set."""
         return bool(self.imap_server and self.email_addr and self.email_pass)
 
     def reload_config(self):
-        """Re-read env vars (useful if user updates .env at runtime)."""
         self.imap_server = os.getenv("EMAIL_IMAP_SERVER", "")
         self.email_addr = os.getenv("EMAIL_ADDRESS", "")
         self.email_pass = os.getenv("EMAIL_PASSWORD", "")
         self.folder = os.getenv("EMAIL_FOLDER", "INBOX")
 
     def fetch_new_emails(self) -> list[dict]:
-        """
-        Connect to IMAP, fetch UNSEEN emails, parse & chunk them.
-
-        Returns a list of dicts:
-            {
-                "filename": "email_<message_id_hash>.eml",
-                "subject": "Re: Pricing Update",
-                "from": "alice@example.com",
-                "date": "2025-04-01",
-                "chunks": [ {text, page, line, section, source_date}, ... ]
-            }
-        """
         if not self.is_configured():
             return []
 
@@ -64,12 +37,10 @@ class EmailFetcher:
         conn = None
 
         try:
-            # Connect
             conn = imaplib.IMAP4_SSL(self.imap_server)
             conn.login(self.email_addr, self.email_pass)
             conn.select(self.folder, readonly=False)
 
-            # Search for UNSEEN emails
             status, msg_nums = conn.search(None, "UNSEEN")
             if status != "OK" or not msg_nums[0]:
                 return []
@@ -79,7 +50,6 @@ class EmailFetcher:
 
             for eid in email_ids:
                 try:
-                    # Fetch the full email
                     status, data = conn.fetch(eid, "(RFC822)")
                     if status != "OK" or not data[0]:
                         continue
@@ -89,14 +59,12 @@ class EmailFetcher:
                         raw_bytes, policy=email_lib.policy.default
                     )
 
-                    # Dedup by Message-ID
                     msg_id = msg.get("Message-ID", "")
                     if msg_id and msg_id in self._seen_ids:
                         continue
                     if msg_id:
                         self._seen_ids.add(msg_id)
 
-                    # Extract basic headers for display
                     subject = str(msg.get("Subject", "(No Subject)"))
                     sender = str(msg.get("From", "Unknown"))
                     email_date = None
@@ -108,7 +76,6 @@ class EmailFetcher:
                         except Exception:
                             pass
 
-                    # Write to a temp .eml file so the ingestor can parse it
                     safe_id = (msg_id or str(eid)).replace("<", "").replace(">", "")
                     safe_id = "".join(c if c.isalnum() else "_" for c in safe_id)[:60]
                     eml_filename = f"email_{safe_id}.eml"
@@ -117,10 +84,8 @@ class EmailFetcher:
                     with open(tmp_path, "wb") as f:
                         f.write(raw_bytes)
 
-                    # Parse & chunk via the ingestor
                     chunks, _ = self.ingestor.process_file(tmp_path)
 
-                    # Clean up temp file
                     try:
                         os.remove(tmp_path)
                     except OSError:
@@ -135,7 +100,6 @@ class EmailFetcher:
                             "chunks": chunks,
                         })
 
-                    # Mark as SEEN so we don't re-fetch next poll
                     conn.store(eid, "+FLAGS", "\\Seen")
 
                 except Exception as e:
@@ -157,10 +121,6 @@ class EmailFetcher:
         return results
 
     def test_connection(self) -> tuple[bool, str]:
-        """
-        Test IMAP connection. Returns (success, message).
-        Useful for the UI to show connection status.
-        """
         if not self.is_configured():
             return False, "IMAP credentials not configured in .env"
 

@@ -33,7 +33,6 @@ class FileIngestor:
         print(f"[INFO] Extracted {len(all_chunks)} chunks from {file_path}")
         return all_chunks, filename
 
-    # ── PDF processing (pdfplumber) ─────────────────────────────────
 
     def _process_pdf(self, file_path):
         try:
@@ -44,7 +43,6 @@ class FileIngestor:
                     text = page.extract_text()
                     if not text or not text.strip():
                         continue
-                    # Split page text into chunks
                     page_chunks = self._split_into_chunks(text, max_length=1000)
                     for i, chunk in enumerate(page_chunks):
                         all_chunks.append({
@@ -57,7 +55,6 @@ class FileIngestor:
             print(f"[ERROR] PDF extraction failed: {e}")
             return []
 
-    # ── DOCX processing (python-docx) ──────────────────────────────
 
     def _process_docx(self, file_path):
         try:
@@ -70,7 +67,6 @@ class FileIngestor:
                 text = para.text.strip()
                 if not text:
                     continue
-                # Detect headings for section tracking
                 if para.style and para.style.name.startswith("Heading"):
                     current_section = text
                 full_text.append(text)
@@ -82,7 +78,6 @@ class FileIngestor:
             print(f"[ERROR] DOCX extraction failed: {e}")
             return []
 
-    # ── Text helpers ────────────────────────────────────────────────
 
     def _extract_text_from_txt(self, file_path):
         with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
@@ -92,7 +87,6 @@ class FileIngestor:
         if not text.strip():
             return []
 
-        # Split by double newline first (paragraphs)
         paragraphs = text.split("\n\n")
         chunks, current_chunk = [], ""
 
@@ -101,7 +95,6 @@ class FileIngestor:
             if not para:
                 continue
 
-            # If a paragraph is still too long, split it by single newline
             if len(para) > max_length:
                 sub_paras = para.split("\n")
                 for sub in sub_paras:
@@ -126,10 +119,8 @@ class FileIngestor:
             chunks.append(current_chunk.strip())
         return chunks
 
-    # ── Excel processing ────────────────────────────────────────────
 
     def _process_excel(self, file_path):
-        """Process .xlsx files — each row becomes a chunk with column headers as keys."""
         try:
             import openpyxl
             wb = openpyxl.load_workbook(file_path, read_only=True, data_only=True)
@@ -139,7 +130,6 @@ class FileIngestor:
                 rows = list(ws.iter_rows(values_only=True))
                 if not rows:
                     continue
-                # First row is header
                 headers = [str(h).strip() if h is not None else f"Column_{i}" for i, h in enumerate(rows[0])]
                 for row_idx, row in enumerate(rows[1:], start=2):
                     parts = []
@@ -161,10 +151,8 @@ class FileIngestor:
             print(f"[ERROR] Excel processing failed: {e}")
             return []
 
-    # ── CSV processing ──────────────────────────────────────────────
 
     def _process_csv(self, file_path):
-        """Process .csv files — each row becomes a chunk with column headers as keys."""
         try:
             all_chunks = []
             with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
@@ -192,20 +180,16 @@ class FileIngestor:
             print(f"[ERROR] CSV processing failed: {e}")
             return []
 
-    # ── Email (.eml) processing ─────────────────────────────────────
 
     def _process_email(self, file_path):
-        """Parse a .eml file and return chunks with email metadata."""
         try:
             with open(file_path, "rb") as f:
                 msg = email.message_from_binary_file(f, policy=email.policy.default)
 
-            # Extract header fields
             sender = str(msg.get("From", "Unknown"))
             subject = str(msg.get("Subject", "(No Subject)"))
             to = str(msg.get("To", "Unknown"))
 
-            # Parse actual email date
             email_date = None
             raw_date = msg.get("Date")
             if raw_date:
@@ -215,7 +199,6 @@ class FileIngestor:
                 except Exception:
                     email_date = None
 
-            # Extract plain-text body
             body = ""
             if msg.is_multipart():
                 for part in msg.walk():
@@ -233,7 +216,6 @@ class FileIngestor:
                 print(f"[WARN] No text body found in email: {file_path}")
                 return []
 
-            # Split long email threads on common reply/forward markers
             thread_parts = re.split(
                 r'\n\s*(?:On .+ wrote:|---------- Forwarded message ----------|From:.*Sent:)',
                 body

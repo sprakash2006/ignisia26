@@ -1,4 +1,4 @@
-/* ── Loader Component ── */
+
 .loader-fullpage {
   display: flex;
   align-items: center;
@@ -16,7 +16,7 @@
   padding: 40px;
 }
 
-/* Spinner with icon */
+
 .loader-spinner {
   position: relative;
   width: 64px;
@@ -42,7 +42,7 @@
   animation: loader-pulse 1.5s ease-in-out infinite;
 }
 
-/* Text */
+
 .loader-text {
   font-size: 14px;
   font-weight: 600;
@@ -50,7 +50,7 @@
   letter-spacing: 0.3px;
 }
 
-/* Bouncing dots */
+
 .loader-dots {
   display: flex;
   gap: 6px;
@@ -72,7 +72,7 @@
   animation-delay: 0.3s;
 }
 
-/* Animations */
+
 @keyframes loader-spin {
   to { transform: rotate(360deg); }
 }

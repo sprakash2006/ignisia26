@@ -97,7 +97,7 @@ export default function TicketsPage() {
               <p className="tk-sub">Manage and resolve customer support queries</p>
             </div>
 
-            {/* Stats */}
+            {}
             <div className="tk-stats">
               {[
                 { label: "Total", value: stats.total, cls: "total" },
@@ -113,7 +113,7 @@ export default function TicketsPage() {
               ))}
             </div>
 
-            {/* Filters */}
+            {}
             <div className="tk-filters">
               <div className="tk-tabs">
                 {STATUS_TABS.map((tab) => (
@@ -135,12 +135,12 @@ export default function TicketsPage() {
               />
             </div>
 
-            {/* Ticket List */}
+            {}
             {listLoading ? (
               <Loader text="Loading tickets..." />
             ) : filtered.length === 0 ? (
               <div className="tk-empty">
-                <div className="tk-empty-icon">🎫</div>
+                <div className="tk-empty-icon"></div>
                 <p>No tickets found{activeTab !== "all" ? ` with status "${activeTab}"` : ""}.</p>
               </div>
             ) : (
@@ -168,7 +168,7 @@ export default function TicketsPage() {
                   ))}
                 </div>
 
-                {/* Pagination */}
+                {}
                 {totalPages > 1 && (
                   <div className="tk-pagination">
                     <button

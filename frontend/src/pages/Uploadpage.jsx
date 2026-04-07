@@ -4,7 +4,7 @@ import Sidebar from "../components/Sidebar";
 import Loader from "../components/Loader";
 import "./Uploadpage.css";
 
-const FILE_ICONS = { pdf: "📄", docx: "📝", xlsx: "📊", csv: "📊", txt: "📃", eml: "📧" };
+const FILE_ICONS = { pdf: "", docx: "", xlsx: "", csv: "", txt: "", eml: "" };
 
 export default function UploadPage() {
   const [docs, setDocs] = useState([]);
@@ -26,7 +26,7 @@ export default function UploadPage() {
     try {
       const data = await api.get("/documents/");
       setDocs(data);
-    } catch { /* empty */ } finally {
+    } catch {  } finally {
       setPageLoading(false);
     }
   }
@@ -38,7 +38,7 @@ export default function UploadPage() {
     setUploading(true);
     setUploadProgress(0);
 
-    // Simulate progress while actual upload happens
+    
     let p = 0;
     const interval = setInterval(() => {
       p += Math.random() * 12 + 3;
@@ -100,7 +100,7 @@ export default function UploadPage() {
 
       <main className="upload-main">
         <div className="upload-inner">
-          {/* Header */}
+          {}
           <div className="up-header animate-fade-up">
             <div>
               <h1 className="up-title">Knowledge Resources</h1>
@@ -118,17 +118,17 @@ export default function UploadPage() {
             </div>
           </div>
 
-          {/* Visibility toggle */}
+          {}
           <div className="vis-toggle animate-fade-up delay-1">
             <button className={`vis-btn ${visibility === "shared" ? "active" : ""}`} onClick={() => setVisibility("shared")}>
-              🏢 Shared (org-wide)
+               Shared (org-wide)
             </button>
             <button className={`vis-btn ${visibility === "private" ? "active" : ""}`} onClick={() => setVisibility("private")}>
-              🔒 Private (my docs)
+               Private (my docs)
             </button>
           </div>
 
-          {/* Drop zone */}
+          {}
           <div
             className={`up-drop-zone animate-fade-up delay-1 ${dragOver ? "drag-active" : ""}`}
             onDragOver={e => { e.preventDefault(); setDragOver(true); }}
@@ -154,7 +154,7 @@ export default function UploadPage() {
               </div>
             ) : (
               <>
-                <div className="up-drop-icon">📂</div>
+                <div className="up-drop-icon"></div>
                 <div className="up-drop-title">Drop files here or click to browse</div>
                 <div className="up-drop-sub">Supports PDF, DOCX, XLSX, CSV, TXT, EML · Max 50 MB</div>
                 <div className="up-drop-btn">Choose file</div>
@@ -162,12 +162,12 @@ export default function UploadPage() {
             )}
           </div>
 
-          {/* Document list */}
+          {}
           <div className="up-docs-section animate-fade-up delay-2">
             <div className="up-docs-toolbar">
               <h2 className="up-docs-heading">Uploaded Documents</h2>
               <div className="up-docs-search">
-                <span>🔍</span>
+                <span></span>
                 <input type="text" placeholder="Search documents..." value={search} onChange={e => setSearch(e.target.value)} />
               </div>
             </div>
@@ -181,19 +181,19 @@ export default function UploadPage() {
                 const ext = doc.file_type || doc.filename?.split(".").pop() || "";
                 return (
                   <div className="up-doc-row" key={doc.id}>
-                    <div className="up-doc-icon">{FILE_ICONS[ext] || "📎"}</div>
+                    <div className="up-doc-icon">{FILE_ICONS[ext] || ""}</div>
                     <div className="up-doc-info">
                       <div className="up-doc-name">{doc.filename}</div>
                       <div className="up-doc-meta">
-                        {ext.toUpperCase()} · {doc.chunk_count || 0} chunks · {doc.visibility === "private" ? "🔒 Private" : "🏢 Shared"}
+                        {ext.toUpperCase()} · {doc.chunk_count || 0} chunks · {doc.visibility === "private" ? " Private" : " Shared"}
                       </div>
                     </div>
                     <div className="up-doc-right">
                       <span className={`up-doc-status ${doc.status}`}>
-                        {doc.status === "ready" ? "✔ Indexed" : doc.status === "failed" ? "✕ Failed" : "⏳ Processing"}
+                        {doc.status === "ready" ? " Indexed" : doc.status === "failed" ? " Failed" : "⏳ Processing"}
                       </span>
                       <button className={`up-doc-delete ${deleting === doc.id ? "deleting" : ""}`} onClick={() => handleDelete(doc.id)} disabled={deleting === doc.id} title="Delete">
-                        {deleting === doc.id ? <span className="mini-spinner" /> : "✕"}
+                        {deleting === doc.id ? <span className="mini-spinner" /> : ""}
                       </button>
                     </div>
                   </div>
@@ -202,9 +202,9 @@ export default function UploadPage() {
             </div>
           </div>
 
-          {/* Tips */}
+          {}
           <div className="up-tips animate-fade-up delay-3">
-            <div className="up-tip-icon">💡</div>
+            <div className="up-tip-icon"></div>
             <div>
               <strong>Upload tips</strong>
               <p>Structured PDFs with clear headings give the best AI retrieval results. Excel files with header rows are parsed row-by-row.</p>

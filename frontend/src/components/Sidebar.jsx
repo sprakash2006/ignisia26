@@ -3,10 +3,10 @@ import { useAuth } from "../lib/AuthContext";
 import "./Sidebar.css";
 
 const NAV_ITEMS = [
-  { icon: "💬", label: "Ask Agent",    to: "/dashboard" },
-  { icon: "📁", label: "Documents",    to: "/upload" },
-  { icon: "📧", label: "Emails",       to: "/emails" },
-  { icon: "🎫", label: "Tickets",      to: "/tickets" },
+  { icon: "", label: "Ask Agent",    to: "/dashboard" },
+  { icon: "", label: "Documents",    to: "/upload" },
+  { icon: "", label: "Emails",       to: "/emails" },
+  { icon: "", label: "Tickets",      to: "/tickets" },
 ];
 
 export default function Sidebar() {
@@ -18,13 +18,13 @@ export default function Sidebar() {
     navigate("/");
   };
 
-  const roleBadge = { director: "🟣", manager: "🔵", employee: "🟢" };
+  const roleBadge = { director: "", manager: "", employee: "" };
 
   return (
     <aside className="sb">
       <div className="sb-logo" onClick={() => navigate("/")}>
-        <div className="sb-logo-mark">C</div>
-        ContextIQ
+        <div className="sb-logo-mark">P</div>
+        PaperTrail
       </div>
 
       <div className="sb-section-title">Workspace</div>
@@ -47,7 +47,7 @@ export default function Sidebar() {
           <div className="sb-user-info">
             <div className="sb-user-name">{user?.full_name || "User"}</div>
             <div className="sb-user-role">
-              {roleBadge[user?.role] || "⚪"} {user?.role || "employee"}
+              {roleBadge[user?.role] || ""} {user?.role || "employee"}
             </div>
           </div>
         </div>

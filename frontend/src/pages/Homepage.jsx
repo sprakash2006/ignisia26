@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/AuthContext";
 import "./Homepage.css";
 
-/* ── Scroll reveal ── */
+
 function useScrollReveal() {
   useEffect(() => {
     const els = document.querySelectorAll(".reveal,.reveal-left,.reveal-right");
@@ -18,7 +18,7 @@ function useScrollReveal() {
   }, []);
 }
 
-/* ── Nav shadow on scroll ── */
+
 function useNavScroll() {
   useEffect(() => {
     const nav = document.querySelector(".home-nav");
@@ -32,7 +32,7 @@ function scrollTo(id) {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
 }
 
-/* ── Mini chart ── */
+
 function MiniChart() {
   return (
     <div className="mini-chart">
@@ -61,14 +61,14 @@ function LogoMark() {
   );
 }
 
-/* ── Data ── */
+
 const FEATURES = [
-  { icon: "🔍", title: "Multi-Format Retrieval", desc: "Ingest PDFs, Excel sheets, emails, and more. The agent unifies every format into a single semantic index." },
-  { icon: "💬", title: "Natural Language Q&A", desc: "Employees ask anything in plain language and get precise, cited answers grounded in your actual company data." },
-  { icon: "🔒", title: "Role-Based Access", desc: "Directors see everything. Managers see their team's docs. Employees see shared + their own. Enforced at database level." },
-  { icon: "⚡", title: "Conflict Resolution", desc: "When two documents contradict, the agent surfaces the conflict, picks the latest source, and explains why." },
-  { icon: "📧", title: "Email Integration", desc: "Connect your IMAP mailbox. New emails are automatically ingested and searchable within minutes." },
-  { icon: "📊", title: "Audit & Analytics", desc: "Track every query, upload, and action. Full transparency for compliance and knowledge ops." },
+  { icon: "", title: "Multi-Format Retrieval", desc: "Ingest PDFs, Excel sheets, emails, and more. The agent unifies every format into a single semantic index." },
+  { icon: "", title: "Natural Language Q&A", desc: "Employees ask anything in plain language and get precise, cited answers grounded in your actual company data." },
+  { icon: "", title: "Role-Based Access", desc: "Directors see everything. Managers see their team's docs. Employees see shared + their own. Enforced at database level." },
+  { icon: "", title: "Conflict Resolution", desc: "When two documents contradict, the agent surfaces the conflict, picks the latest source, and explains why." },
+  { icon: "", title: "Email Integration", desc: "Connect your IMAP mailbox. New emails are automatically ingested and searchable within minutes." },
+  { icon: "", title: "Audit & Analytics", desc: "Track every query, upload, and action. Full transparency for compliance and knowledge ops." },
 ];
 
 const HOW_STEPS = [
@@ -95,9 +95,9 @@ export default function HomePage() {
   return (
     <div className="home-page">
 
-      {/* ── NAV ── */}
+      {}
       <nav className="home-nav">
-        <div className="home-nav-logo"><LogoMark />ContextIQ</div>
+        <div className="home-nav-logo"><LogoMark />PaperTrail</div>
         <div className="home-nav-links">
           <button className="nav-link-btn" onClick={() => scrollTo("features")}>Product</button>
           <button className="nav-link-btn" onClick={() => scrollTo("how")}>How it works</button>
@@ -108,18 +108,18 @@ export default function HomePage() {
         </div>
       </nav>
 
-      {/* ── HERO ── */}
+      {}
       <section className="home-hero">
         <div className="hero-left">
           <div className="hero-badge reveal">
             <span className="hero-badge-dot" />
-            AI Agent · SME-01 · Ignisia
+            AI Agent · SME-01 · PaperTrail
           </div>
           <h1 className="hero-title reveal delay-1">
             Your employees,<br />backed by <em>every</em><br />document you own.
           </h1>
           <p className="hero-sub reveal delay-2">
-            ContextIQ reads your PDFs, spreadsheets, and emails — so any employee can ask anything and get an instant, cited answer from your actual data.
+            PaperTrail reads your PDFs, spreadsheets, and emails — so any employee can ask anything and get an instant, cited answer from your actual data.
           </p>
           <div className="hero-input-row reveal delay-3">
             <input className="hero-email-input" placeholder="your@company.com" type="email" />
@@ -140,32 +140,32 @@ export default function HomePage() {
           <div className="hero-mockup">
             <div className="mockup-topbar">
               <div className="mockup-dots"><div className="mockup-dot" /><div className="mockup-dot" /><div className="mockup-dot" /></div>
-              <div className="mockup-topbar-title">ContextIQ Agent</div>
+              <div className="mockup-topbar-title">PaperTrail Agent</div>
               <div className="mockup-agent-badge">● LIVE</div>
             </div>
             <div className="mockup-chat">
               <div className="chat-msg user">
-                <div className="chat-avatar user">👤</div>
+                <div className="chat-avatar user"></div>
                 <div className="chat-bubble user">What's our refund policy for bulk orders to Acme Corp last month?</div>
               </div>
               <div className="chat-msg">
                 <div className="chat-avatar agent">AI</div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
                   <div className="chat-sources">
-                    <span className="chat-source-chip">📄 Refund_Policy_v3.pdf</span>
-                    <span className="chat-source-chip">📊 Acme_Q3_Quote.xlsx</span>
-                    <span className="chat-source-chip">✉️ email_thread.eml</span>
+                    <span className="chat-source-chip"> Refund_Policy_v3.pdf</span>
+                    <span className="chat-source-chip"> Acme_Q3_Quote.xlsx</span>
+                    <span className="chat-source-chip"> email_thread.eml</span>
                   </div>
                   <div className="chat-bubble agent">
                     Bulk orders over ₹50,000 are eligible for a{" "}
                     <strong style={{ color: "#00b478" }}>15-day full refund</strong> — initiated within 5 business days.
-                    <div className="cite-pill">📄 Refund_Policy_v3.pdf · Section 4.2</div>
-                    <div className="cite-pill">📊 Acme_Q3_Quote.xlsx · Row 14</div>
+                    <div className="cite-pill"> Refund_Policy_v3.pdf · Section 4.2</div>
+                    <div className="cite-pill"> Acme_Q3_Quote.xlsx · Row 14</div>
                   </div>
                 </div>
               </div>
               <div className="chat-msg user">
-                <div className="chat-avatar user">👤</div>
+                <div className="chat-avatar user"></div>
                 <div className="chat-bubble user">Any conflicts with the old policy?</div>
               </div>
               <div className="chat-msg">
@@ -180,7 +180,7 @@ export default function HomePage() {
           </div>
 
           <div className="hero-float-badge-2">
-            <span style={{ fontSize: 16 }}>✅</span>
+            <span style={{ fontSize: 16 }}></span>
             <div><div className="badge-text">Conflict detected & resolved</div><div className="badge-sub">v3 takes priority over v1</div></div>
           </div>
         </div>
@@ -206,9 +206,9 @@ export default function HomePage() {
             <p className="strip-sub">Build a live knowledge layer over your PDFs, spreadsheets, and email threads. Every employee gets an AI co-worker with full context.</p>
             <div className="strip-features">
               {[
-                { icon: "🗂️", title: "Cross-format indexing", desc: "PDFs, Excel, CSV, Word, TXT, and EML — unified into one semantic index with pgvector." },
-                { icon: "🔗", title: "Source-linked answers", desc: "Every response cites the exact document, section, and row. Zero hallucinations." },
-                { icon: "🧠", title: "Conflict-aware reasoning", desc: "When docs contradict, the agent flags it, picks the most recent, and explains the resolution." },
+                { icon: "", title: "Cross-format indexing", desc: "PDFs, Excel, CSV, Word, TXT, and EML — unified into one semantic index with pgvector." },
+                { icon: "", title: "Source-linked answers", desc: "Every response cites the exact document, section, and row. Zero hallucinations." },
+                { icon: "", title: "Conflict-aware reasoning", desc: "When docs contradict, the agent flags it, picks the most recent, and explains the resolution." },
               ].map(f => (
                 <div className="strip-feature" key={f.title}>
                   <div className="strip-feature-icon">{f.icon}</div>
@@ -221,13 +221,13 @@ export default function HomePage() {
           <div className="strip-right reveal-right">
             <div className="stat-card em">
               <div className="stat-value">3k+</div>
-              <div className="stat-label">SMEs running on ContextIQ agents</div>
+              <div className="stat-label">SMEs running on PaperTrail agents</div>
             </div>
             <div className="stat-card">
               <div className="transfer-row">
-                <div className="transfer-node a">📄</div>
+                <div className="transfer-node a"></div>
                 <div className="transfer-line" />
-                <div className="transfer-node b">🤖</div>
+                <div className="transfer-node b"></div>
               </div>
               <div className="stat-label" style={{ marginTop: 8 }}>Instant retrieval on every query</div>
             </div>
@@ -258,7 +258,7 @@ export default function HomePage() {
 
       {/* ── WHY ── */}
       <section className="home-why" id="why">
-        <div className="section-tag reveal" style={{ margin: "0 auto 12px" }}>Why ContextIQ</div>
+        <div className="section-tag reveal" style={{ margin: "0 auto 12px" }}>Why PaperTrail</div>
         <h2 className="section-heading-center reveal delay-1">Why teams prefer our <em>agents</em></h2>
         <p className="section-sub-center reveal delay-2">
           Purpose-built for SMEs who can't afford enterprise knowledge tools but pay the same cost of siloed data.
@@ -274,7 +274,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── HOW IT WORKS ── */}
+      {}
       <section className="home-how" id="how">
         <div className="home-how-inner">
           <div className="section-tag reveal">How it works</div>
@@ -292,7 +292,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── STATS ── */}
+      {}
       <section className="home-stats">
         <div className="stats-header">
           <div className="section-tag reveal" style={{ margin: "0 auto 12px" }}>Our impact</div>
@@ -353,11 +353,11 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── FOOTER ── */}
+      {}
       <footer className="home-footer">
         <div className="footer-top">
           <div>
-            <div className="footer-logo"><LogoMark />ContextIQ</div>
+            <div className="footer-logo"><LogoMark />PaperTrail</div>
             <p className="footer-brand-desc">AI-powered knowledge retrieval for SMEs. Think. Build. Evolve.</p>
           </div>
           {FOOTER_COLS.map(col => (
@@ -370,7 +370,7 @@ export default function HomePage() {
           ))}
         </div>
         <div className="footer-bottom">
-          <p>© 2026 ContextIQ · Built for Ignisia AI Hackathon, MIT-WPU Pune</p>
+          <p>© 2026 PaperTrail · Built for PaperTrail AI Hackathon, MIT-WPU Pune</p>
           <div className="footer-socials">
             {["𝕏", "in", "f"].map(s => <div className="footer-social" key={s}>{s}</div>)}
           </div>

@@ -12,11 +12,10 @@ load_dotenv()
 UPLOAD_DIR = "uploaded_docs"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-st.set_page_config(page_title="Knowledge Retrieval System", page_icon="🧠", layout="wide")
-st.title("📧 Multi-Format Knowledge Retrieval System")
+st.set_page_config(page_title="Knowledge Retrieval System", page_icon="", layout="wide")
+st.title(" Multi-Format Knowledge Retrieval System")
 st.caption("Upload Excel, PDF, DOCX, CSV, TXT, or EML files — ask questions across all your documents & emails")
 
-# --- Init ---
 @st.cache_resource
 def get_retriever():
     api_key = os.getenv("OPENAI_API_KEY")
@@ -33,7 +32,6 @@ rag = get_retriever()
 ingestor = FileIngestor()
 fetcher = get_email_fetcher()
 
-# Session state init
 if "ingested_files" not in st.session_state:
     st.session_state.ingested_files = set()
 if "messages" not in st.session_state:
@@ -46,9 +44,7 @@ if "current_user" not in st.session_state:
     st.session_state.current_user = list_users()[0].name
 
 
-# ── Helper: ingest a single uploaded file ─────────────────────────
 def _ingest_file(file_path, display_name=None, owner=None, visibility="shared"):
-    """Ingest a file into the RAG store. Returns (success, num_chunks)."""
     fname = display_name or os.path.basename(file_path)
     if fname in st.session_state.ingested_files:
         return False, 0
@@ -62,9 +58,7 @@ def _ingest_file(file_path, display_name=None, owner=None, visibility="shared"):
     return False, 0
 
 
-# ── IMAP email polling ────────────────────────────────────────────
 def _poll_emails():
-    """Fetch new emails from IMAP and ingest them as private docs for the current user."""
     if not fetcher.is_configured():
         return 0
 
@@ -79,7 +73,6 @@ def _poll_emails():
 
         chunks = em["chunks"]
         if chunks:
-            # Emails are always private to the user who fetched them
             rag.add_documents(filename=fname, chunks=chunks,
                               owner=current_user, visibility="private")
             st.session_state.ingested_files.add(fname)
@@ -87,20 +80,18 @@ def _poll_emails():
 
             timestamp = time.strftime("%H:%M:%S")
             st.session_state.email_log.append(
-                f"**{timestamp}** — 📨 *{em['subject']}* from `{em['from']}` "
+                f"**{timestamp}** —  *{em['subject']}* from `{em['from']}` "
                 f"({em['date']}) — {len(chunks)} chunks [owner: {current_user}]"
             )
 
     if new_count > 0:
-        st.toast(f"📨 {new_count} new email(s) fetched and ingested!", icon="📬")
+        st.toast(f" {new_count} new email(s) fetched and ingested!", icon="")
 
     return new_count
 
 
-# --- Sidebar ---
 with st.sidebar:
-    # ── User selector (top of sidebar) ──
-    st.header("👤 Current User")
+    st.header(" Current User")
     users = list_users()
     user_names = [u.name for u in users]
     user_labels = [u.display for u in users]
@@ -110,26 +101,24 @@ with st.sidebar:
     chosen_name = user_names[user_labels.index(selected)]
     if chosen_name != st.session_state.current_user:
         st.session_state.current_user = chosen_name
-        # Clear chat when switching users so responses don't leak across roles
         st.session_state.messages = []
         st.rerun()
 
     active_user = get_user(st.session_state.current_user)
-    role_badge = {"director": "🟣", "manager": "🔵", "employee": "🟢"}.get(active_user.role, "⚪")
+    role_badge = {"director": "", "manager": "", "employee": ""}.get(active_user.role, "")
     st.caption(f"{role_badge} Role: **{active_user.role.title()}** — "
                f"Reports to: {active_user.reports_to or '—'}")
 
     st.divider()
 
-    # ── File uploader ──
-    st.header("📂 Documents")
+    st.header(" Documents")
 
     upload_space = st.radio(
         "Upload to:",
-        ["🏢 Shared (org-wide)", f"🔒 Private ({active_user.name}'s space)"],
+        [" Shared (org-wide)", f" Private ({active_user.name}'s space)"],
         help="Shared docs are visible to everyone. Private docs follow role-based access."
     )
-    is_private = upload_space.startswith("🔒")
+    is_private = upload_space.startswith("")
 
     uploaded_files = st.file_uploader(
         "Upload files (PDF, DOCX, XLSX, CSV, TXT, EML)",
@@ -148,31 +137,30 @@ with st.sidebar:
             success, n_chunks = _ingest_file(file_path, display_name=uploaded_file.name,
                                               owner=owner, visibility=vis)
             if success:
-                label = f"🔒 {active_user.name}" if is_private else "🏢 Shared"
-                st.success(f"✅ {uploaded_file.name} — {n_chunks} chunks [{label}]")
+                label = f" {active_user.name}" if is_private else " Shared"
+                st.success(f" {uploaded_file.name} — {n_chunks} chunks [{label}]")
             elif uploaded_file.name in st.session_state.ingested_files:
-                st.info(f"ℹ️ {uploaded_file.name} already indexed")
+                st.info(f"ℹ {uploaded_file.name} already indexed")
             else:
-                st.warning(f"⚠️ No content extracted from {uploaded_file.name}")
+                st.warning(f" No content extracted from {uploaded_file.name}")
 
-    # ── Email connection section ──
     st.divider()
-    st.subheader("📬 Email Integration")
+    st.subheader(" Email Integration")
 
     if fetcher.is_configured():
         if not st.session_state.email_connected:
             ok, msg = fetcher.test_connection()
             st.session_state.email_connected = ok
             if ok:
-                st.success(f"✅ {msg}")
+                st.success(f" {msg}")
             else:
-                st.error(f"❌ {msg}")
+                st.error(f" {msg}")
         else:
-            st.success(f"✅ Connected to `{fetcher.email_addr}`")
+            st.success(f" Connected to `{fetcher.email_addr}`")
 
         st.caption(f"Emails will be ingested as **private** docs for **{active_user.name}**")
 
-        if st.button("📥 Refresh Emails"):
+        if st.button(" Refresh Emails"):
             with st.spinner("Checking mailbox..."):
                 n = _poll_emails()
             if n == 0:
@@ -181,7 +169,7 @@ with st.sidebar:
                 st.rerun()
     else:
         st.info(
-            "📧 **Email not configured.** Add these to your `.env` file:\n\n"
+            " **Email not configured.** Add these to your `.env` file:\n\n"
             "```\n"
             "EMAIL_IMAP_SERVER=imap.gmail.com\n"
             "EMAIL_ADDRESS=you@gmail.com\n"
@@ -191,25 +179,23 @@ with st.sidebar:
             "For Gmail, use an [App Password](https://myaccount.google.com/apppasswords)."
         )
 
-    # Live email feed
     if st.session_state.email_log:
         st.divider()
-        st.subheader("📨 Email Feed")
+        st.subheader(" Email Feed")
         for entry in reversed(st.session_state.email_log[-10:]):
             st.markdown(entry)
 
-    # ── Indexed documents list (filtered by current user's access) ──
     st.divider()
-    st.subheader("📑 Indexed Documents")
+    st.subheader(" Indexed Documents")
     sources = rag.list_sources(user=active_user)
     if sources:
         for src in sources:
             ext = os.path.splitext(src["source"])[1].lower()
             type_icon = {
-                ".xlsx": "📊", ".csv": "📊", ".pdf": "📄",
-                ".docx": "📝", ".txt": "📃", ".eml": "📧",
-            }.get(ext, "📎")
-            vis_icon = "🔒" if src["visibility"] == "private" else "🏢"
+                ".xlsx": "", ".csv": "", ".pdf": "",
+                ".docx": "", ".txt": "", ".eml": "",
+            }.get(ext, "")
+            vis_icon = "" if src["visibility"] == "private" else ""
             owner_label = src["owner"] if src["owner"] != "__shared__" else "Shared"
             st.write(f"{type_icon} {vis_icon} {src['source']}  \n"
                      f"<small style='color:gray'>Owner: {owner_label}</small>",
@@ -219,7 +205,7 @@ with st.sidebar:
         st.info("No documents visible for your role.")
 
     st.divider()
-    if st.button("🗑️ Clear All Data", type="secondary"):
+    if st.button(" Clear All Data", type="secondary"):
         rag.clear_database()
         st.session_state.ingested_files.clear()
         st.session_state.email_log.clear()
@@ -229,14 +215,12 @@ with st.sidebar:
         st.rerun()
 
 
-# --- Helper functions ---
 def _render_sources(sources_list):
-    """Display source references."""
-    with st.expander("🧾 Source References"):
+    with st.expander(" Source References"):
         for src in sources_list:
             section_str = f", Section: {src['section']}" if src.get("section") else ""
             doc_name = str(src.get("document", ""))
-            vis_icon = "🔒" if src.get("visibility") == "private" else "🏢"
+            vis_icon = "" if src.get("visibility") == "private" else ""
             if doc_name.endswith(".eml"):
                 line_label = "Part"
             elif src.get("section") in ("CSV",) or doc_name.endswith((".xlsx", ".csv")):
@@ -251,22 +235,20 @@ def _render_sources(sources_list):
 
 
 def _render_conflicts(conflicts_list):
-    """Display conflict alerts with trusted/untrusted source info."""
     for c in conflicts_list:
         if "resolution" not in c:
             continue
         st.warning(
-            f"**⚠️ Conflict detected** — *{c.get('field', 'data')}*\n\n"
+            f"** Conflict detected** — *{c.get('field', 'data')}*\n\n"
             f"{c.get('summary', 'Conflicting information found across sources.')}\n\n"
-            f"✅ **Trusted:** {c['trusted_source']} ({c['trusted_detail']}, "
+            f" **Trusted:** {c['trusted_source']} ({c['trusted_detail']}, "
             f"dated {c.get('trusted_date', 'N/A')})\n\n"
-            f"❌ **Overridden:** {c['untrusted_source']} ({c['untrusted_detail']}, "
+            f" **Overridden:** {c['untrusted_source']} ({c['untrusted_detail']}, "
             f"dated {c.get('untrusted_date', 'N/A')})\n\n"
             f"**Resolution:** {c['resolution']}"
         )
 
 
-# --- Chat ---
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])

@@ -53,12 +53,12 @@ export default function RaiseTicketPage() {
     return (
       <div className="rt-page">
         <nav className="rt-nav">
-          <Link to="/" className="rt-nav-logo"><LogoMark />ContextIQ</Link>
+          <Link to="/" className="rt-nav-logo"><LogoMark />PaperTrail</Link>
           <Link to="/" className="rt-nav-back">← Back to home</Link>
         </nav>
         <div className="rt-center">
           <div className="rt-success-card animate-fade-up">
-            <div className="rt-success-icon">✅</div>
+            <div className="rt-success-icon"></div>
             <h2 className="rt-success-title">Ticket Submitted!</h2>
             <p className="rt-success-id">Your ticket ID is <strong>#{result.ticketId}</strong></p>
             <p className="rt-success-msg">We've received your query and will get back to you shortly at <strong>{form.customer_email}</strong>.</p>
@@ -75,14 +75,14 @@ export default function RaiseTicketPage() {
   return (
     <div className="rt-page">
       <nav className="rt-nav">
-        <Link to="/" className="rt-nav-logo"><LogoMark />ContextIQ</Link>
+        <Link to="/" className="rt-nav-logo"><LogoMark />PaperTrail</Link>
         <Link to="/" className="rt-nav-back">← Back to home</Link>
       </nav>
 
       <div className="rt-center">
         <div className="rt-card animate-fade-up">
           <div className="rt-header">
-            <div className="rt-header-icon">🎫</div>
+            <div className="rt-header-icon"></div>
             <h1 className="rt-title">Raise a Support Ticket</h1>
             <p className="rt-subtitle">Describe your issue and our team will get back to you as soon as possible.</p>
           </div>
