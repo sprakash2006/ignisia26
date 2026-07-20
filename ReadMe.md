@@ -1,11 +1,11 @@
-# Ignisia26 — Enterprise Knowledge Retrieval & Support Platform
+Enterprise Knowledge Retrieval & Support Platform
 
 > A production-grade **RAG (Retrieval-Augmented Generation)** platform for multi-format
 > document intelligence, built around three pillars: **data integrity** (conflict &
 > duplicate detection), **role-based access control** (org-hierarchy aware), and
 > **grounded, citation-backed answers** (strict anti-hallucination prompting).
 
-Ignisia26 lets an organization upload its documents and emails, ask natural-language
+PaperTrail lets an organization upload its documents and emails, ask natural-language
 questions across all of them, and get answers that are **only** grounded in those
 sources — complete with citations, data-quality warnings, and automatic resolution of
 contradictory information. It also includes a full **AI-assisted customer support
@@ -318,7 +318,7 @@ its stored file.
 ## 📂 Project Structure
 
 ```
-ignisia26/
+PaperTrail/
 ├── docker-compose.yml          # Full-stack orchestration (frontend + backend)
 ├── .env.example                # Frontend build args for compose
 ├── architecture-diagram.html   # Interactive architecture diagram
@@ -431,8 +431,8 @@ All routes are prefixed with `/api`. Protected routes require
 
 ### 1. Clone
 ```bash
-git clone https://github.com/sprakash2006/ignisia26.git
-cd ignisia26
+git clone https://github.com/sprakash2006/PaperTrail.git
+cd PaperTrail
 ```
 
 ### 2. Backend (FastAPI)
@@ -550,16 +550,16 @@ talks to the API over a single origin — no CORS issues in the browser.
 
 **Backend:**
 ```bash
-docker build -t ignisia26-backend ./backend
-docker run --env-file backend/.env -p 8000:8000 ignisia26-backend
+docker build -t PaperTrail-backend ./backend
+docker run --env-file backend/.env -p 8000:8000 PaperTrail-backend
 ```
 
 **Frontend** (Vite inlines `VITE_*` at build time, so pass them as build args):
 ```bash
-docker build -t ignisia26-frontend ./frontend \
+docker build -t PaperTrail-frontend ./frontend \
   --build-arg VITE_SUPABASE_URL=https://xxxx.supabase.co \
   --build-arg VITE_SUPABASE_ANON_KEY=your_anon_key
-docker run -p 8080:80 ignisia26-frontend
+docker run -p 8080:80 PaperTrail-frontend
 ```
 
 ### Hosting checklist
@@ -577,7 +577,7 @@ docker run -p 8080:80 ignisia26-frontend
 
 ## 🧪 Demo Data
 
-The seed migrations create a **"Ignisia Demo"** organization with a four-person
+The seed migrations create a **"PaperTrail Demo"** organization with a four-person
 hierarchy:
 
 | Name | Role | Reports To |
